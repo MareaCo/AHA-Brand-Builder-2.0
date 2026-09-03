@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-aha-pale/40 text-slate-800;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+}
+.btn-primary {
+  @apply btn bg-aha-navy text-white hover:bg-aha-periwinkle;
+}
+.btn-secondary {
+  @apply btn bg-white text-aha-navy border border-aha-navy/20 hover:border-aha-navy;
+}
+.btn-accent {
+  @apply btn bg-aha-lime text-aha-navy hover:brightness-95;
+}
+.btn-ghost {
+  @apply btn text-aha-navy hover:bg-aha-navy/5;
+}
+
+.card {
+  @apply rounded-2xl bg-white shadow-sm border border-slate-100;
+}

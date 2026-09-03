@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.env
+*.log
+backend/dev.db
+backend/dev.db-journal
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/exports/*
+!backend/exports/.gitkeep
+.DS_Store

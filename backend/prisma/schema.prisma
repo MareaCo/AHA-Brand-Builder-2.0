@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  createdAt DateTime @default(now())
+
+  brands Brand[]
+
+  @@map("clients")
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  clientId  String
+  name      String
+  industry  String?
+  createdAt DateTime @default(now())
+
+  client   Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sessions Session[]
+
+  @@map("brands")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  brandId      String
+  status       String   @default("en_progreso") // en_progreso | completado
+  currentStage Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  brand        Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  stageData    StageData[]
+  files        UploadedFile[]
+  deliverables Deliverable[]
+  messages     Message[]
+
+  @@map("sessions")
+}
+
+model StageData {
+  id          String   @id @default(cuid())
+  sessionId   String
+  stageNumber Int
+  stageName   String
+  content     String   @default("{}") // JSON blob, structure free per stage
+  status      String   @default("borrador") // borrador | propuesto_por_ia | validado_por_usuario | editado_por_usuario
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, stageNumber])
+  @@map("stage_data")
+}
+
+model UploadedFile {
+  id                String   @id @default(cuid())
+  sessionId         String
+  filename          String
+  fileType          String
+  storagePath       String
+  extractedSummary  String?
+  extractedText     String?
+  createdAt         DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("uploaded_files")
+}
+
+model Deliverable {
+  id        String   @id @default(cuid())
+  sessionId String
+  type      String // piramide | manifiesto
+  content   String // JSON or text
+  format    String // svg | text
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("deliverables")
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  sessionId   String
+  stageNumber Int
+  role        String // user | assistant
+  content     String
+  meta        String? // JSON: proposal flags, etc.
+  createdAt   DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
