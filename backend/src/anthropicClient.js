@@ -2,10 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getStage } from "./lib/stageDefinitions.js";
 import {
   buildSystemPrompt,
-  RECORD_PROPOSAL_TOOL,
+  buildRecordProposalTool,
   UPDATE_STAGE_META_TOOL,
   getWebSearchTool,
 } from "./lib/systemPrompt.js";
+
+const LOCKED_STATUSES = new Set(["validado_por_usuario", "editado_por_usuario"]);
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 
@@ -23,14 +25,27 @@ function getClient() {
 // Ejecuta un turno de conversación para una etapa dada, incluyendo el loop de
 // tool-use (record_proposal, update_stage_meta, y opcionalmente web_search).
 // Devuelve { text, proposals: [{field_key, field_label, value, rationale}], metaUpdates: [{...}], rawStopReason }
-export async function runStageTurn({ stageNumber, accumulatedSummary, filesSummary, stageMeta, history }) {
+export async function runStageTurn({
+  stageNumber,
+  accumulatedSummary,
+  filesSummary,
+  stageMeta,
+  currentFields,
+  history,
+}) {
   const stage = getStage(stageNumber);
-  const system = buildSystemPrompt({ stageNumber, accumulatedSummary, filesSummary, stageMeta });
+  const system = buildSystemPrompt({ stageNumber, accumulatedSummary, filesSummary, stageMeta, currentFields });
 
-  const tools = [RECORD_PROPOSAL_TOOL, UPDATE_STAGE_META_TOOL];
+  const tools = [UPDATE_STAGE_META_TOOL];
+  if (stage?.fields?.length > 0) tools.push(buildRecordProposalTool(stage));
   if (stage?.webSearchAllowed) tools.push(getWebSearchTool());
 
   const messages = [...history];
+  // Copia local del estado de los campos: se actualiza en vivo dentro del loop para
+  // que una propuesta aceptada bloquee inmediatamente otro intento sobre la misma
+  // clave más adelante en el mismo turno, y para poder rechazar (con un tool_result
+  // correctivo) cualquier intento de reescribir un campo que el usuario ya cerró.
+  const fieldsState = { ...(currentFields || {}) };
 
   const proposals = [];
   const metaUpdates = [];
@@ -65,12 +80,22 @@ export async function runStageTurn({ stageNumber, accumulatedSummary, filesSumma
     const toolResults = [];
     for (const toolUse of toolUses) {
       if (toolUse.name === "record_proposal") {
-        proposals.push({
-          field_key: toolUse.input.field_key,
-          field_label: toolUse.input.field_label,
-          value: toolUse.input.value,
-          rationale: toolUse.input.rationale || null,
-        });
+        const { field_key, field_label, value, rationale } = toolUse.input;
+        const existing = fieldsState[field_key];
+
+        if (existing && LOCKED_STATUSES.has(existing.status)) {
+          const shownValue = typeof existing.value === "string" ? existing.value : JSON.stringify(existing.value);
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            is_error: true,
+            content: `Rechazado: el campo "${field_key}" ya fue cerrado por el usuario (valor actual: "${shownValue}"). No lo repitas ni lo reemplaces — el usuario no pidió cambiarlo en su último mensaje. Continúa con el siguiente campo o paso pendiente.`,
+          });
+          continue;
+        }
+
+        proposals.push({ field_key, field_label, value, rationale: rationale || null });
+        fieldsState[field_key] = { label: field_label, value, status: "propuesto_por_ia", rationale: rationale || null };
         toolResults.push({
           type: "tool_result",
           tool_use_id: toolUse.id,

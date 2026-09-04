@@ -119,6 +119,10 @@ export default function SessionWorkspace() {
               stageNumber={0}
               stageDef={stageDef}
               onFieldsChanged={() => setStageComplete(true)}
+              canAdvance={canAdvance}
+              advancing={advancing}
+              onAdvance={advance}
+              advanceLabel="Continuar a la Etapa 1 →"
             />
           </div>
         </div>
@@ -140,6 +144,9 @@ export default function SessionWorkspace() {
           stageNumber={viewStage}
           stageDef={stageDef}
           onFieldsChanged={(complete) => setStageComplete(complete)}
+          canAdvance={canAdvance}
+          advancing={advancing}
+          onAdvance={advance}
         />
       )}
     </Shell>

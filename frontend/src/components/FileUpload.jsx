@@ -10,31 +10,111 @@ const CHECKLIST = [
   "Toolkits de marca previos, capturas de redes sociales, reportes de analítica",
 ];
 
+function FailedBadge() {
+  return <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">revisar</span>;
+}
+
+function FileCard({ file, onRemove }) {
+  const [expanded, setExpanded] = useState(false);
+  const isAnalyzing = file.extractedSummary === "Analizando...";
+  const isFailed = file.extractedSummary?.startsWith("No se pudo analizar");
+  const summary = file.extractedSummary || "";
+  const isLong = summary.length > 220;
+
+  return (
+    <li className="card p-3 text-xs">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {isAnalyzing ? (
+            <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-aha-periwinkle border-t-transparent" />
+          ) : isFailed ? (
+            <span className="shrink-0 text-amber-500">⚠</span>
+          ) : (
+            <span className="shrink-0 text-green-600">✓</span>
+          )}
+          <span className="truncate font-medium text-slate-700" title={file.filename}>
+            {file.filename}
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {isFailed && <FailedBadge />}
+          {!isAnalyzing && (
+            <button type="button" className="text-red-500 hover:underline" onClick={() => onRemove(file)}>
+              quitar
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isAnalyzing ? (
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-aha-periwinkle/15">
+          <div className="h-full w-2/3 animate-pulse rounded-full bg-aha-periwinkle/60" />
+        </div>
+      ) : (
+        <>
+          <p className={["mt-1.5 text-slate-500", !expanded && "line-clamp-5"].filter(Boolean).join(" ")}>
+            {summary}
+          </p>
+          {isLong && (
+            <button
+              type="button"
+              className="mt-1 text-[10px] font-medium text-aha-periwinkle hover:underline"
+              onClick={() => setExpanded((e) => !e)}
+            >
+              {expanded ? "ver menos" : "ver todo"}
+            </button>
+          )}
+          {file.previewUrl && (
+            <a
+              href={file.previewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-block text-[10px] font-medium text-aha-navy underline decoration-aha-lime decoration-2 underline-offset-2"
+            >
+              Previsualizar archivo
+            </a>
+          )}
+        </>
+      )}
+    </li>
+  );
+}
+
 export default function FileUpload({ sessionId, files, onFilesChanged }) {
   const [dragOver, setDragOver] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [pending, setPending] = useState([]); // [{tempId, filename}]
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
 
   const uploadFiles = useCallback(
     async (fileList) => {
       setError(null);
-      setUploading(true);
-      try {
-        for (const file of Array.from(fileList)) {
+      const incoming = Array.from(fileList).map((file) => ({
+        tempId: `${Date.now()}-${Math.random()}`,
+        filename: file.name,
+        file,
+      }));
+      setPending((p) => [...incoming, ...p]);
+
+      for (const item of incoming) {
+        try {
           // eslint-disable-next-line no-await-in-loop
-          await api.uploadFile(sessionId, file);
+          const uploaded = await api.uploadFile(sessionId, item.file);
+          onFilesChanged((current) => (Array.isArray(current) ? [...current, uploaded] : [uploaded]));
+        } catch (err) {
+          setError(`${item.filename}: ${err.message}`);
+        } finally {
+          setPending((p) => p.filter((x) => x.tempId !== item.tempId));
         }
-        const updated = await api.listFiles(sessionId);
-        onFilesChanged(updated);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setUploading(false);
       }
     },
     [sessionId, onFilesChanged]
   );
+
+  async function handleRemove(file) {
+    await api.deleteFile(sessionId, file.id);
+    onFilesChanged((current) => (Array.isArray(current) ? current.filter((x) => x.id !== file.id) : []));
+  }
 
   return (
     <div>
@@ -64,7 +144,7 @@ export default function FileUpload({ sessionId, files, onFilesChanged }) {
           onChange={(e) => e.target.files?.length && uploadFiles(e.target.files)}
         />
         <p className="text-sm font-medium text-aha-navy">
-          {uploading ? "Analizando insumos..." : "Arrastra tus archivos aquí, o haz click para elegirlos"}
+          Arrastra tus archivos aquí, o haz click para elegirlos
         </p>
         <p className="mt-1 text-xs text-slate-400">PDF, DOCX, XLSX, TXT, PNG o JPG</p>
       </div>
@@ -86,25 +166,15 @@ export default function FileUpload({ sessionId, files, onFilesChanged }) {
         </div>
         <div>
           <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-aha-navy">Archivos cargados</h4>
-          {files.length === 0 && <p className="text-xs text-slate-400">Todavía no has cargado ningún archivo.</p>}
+          {files.length === 0 && pending.length === 0 && (
+            <p className="text-xs text-slate-400">Todavía no has cargado ningún archivo.</p>
+          )}
           <ul className="space-y-2">
+            {pending.map((p) => (
+              <FileCard key={p.tempId} file={{ id: p.tempId, filename: p.filename, extractedSummary: "Analizando..." }} onRemove={() => {}} />
+            ))}
             {files.map((f) => (
-              <li key={f.id} className="card p-2.5 text-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-slate-700">{f.filename}</span>
-                  <button
-                    type="button"
-                    className="text-red-500 hover:underline"
-                    onClick={async () => {
-                      await api.deleteFile(sessionId, f.id);
-                      onFilesChanged(files.filter((x) => x.id !== f.id));
-                    }}
-                  >
-                    quitar
-                  </button>
-                </div>
-                <p className="mt-1 text-slate-500">{f.extractedSummary || "Analizando..."}</p>
-              </li>
+              <FileCard key={f.id} file={f} onRemove={handleRemove} />
             ))}
           </ul>
         </div>

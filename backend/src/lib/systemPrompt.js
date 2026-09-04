@@ -30,9 +30,39 @@ Reglas innegociables:
    proceso).
 7. Si tienes disponible la herramienta de búsqueda web, úsala solo para información
    pública (tendencias de categoría, benchmark de competencia, contexto de mercado) y
-   nunca afirmes que accedes a redes sociales privadas o datos que no tienes.`;
+   nunca afirmes que accedes a redes sociales privadas o datos que no tienes.
+8. CRÍTICO — nunca llames record_proposal para un campo cuyo estado ya sea
+   "validado por el usuario" o "editado por el usuario" (revisa el checklist de campos
+   más abajo) a menos que el ÚLTIMO mensaje del usuario pida explícitamente cambiar o
+   ajustar ese campo específico. Si ya está cerrado y el usuario no pidió cambiarlo,
+   continúa con el siguiente campo o paso — nunca repitas ni regeneres algo ya cerrado.
+   Si intentas registrar una propuesta para un campo ya cerrado sin que te lo hayan
+   pedido, el sistema la rechazará y perderás el turno.
+9. Usa SIEMPRE frases cortas y concretas en tus propuestas de contenido (nunca párrafos
+   largos) — una marca se pierde en un texto extenso. Si una instrucción de etapa te da
+   un límite de palabras, respétalo estrictamente.`;
 
-export function buildSystemPrompt({ stageNumber, accumulatedSummary, filesSummary, stageMeta }) {
+function buildFieldChecklist(stage, currentFields) {
+  if (!stage || stage.fields.length === 0) return "";
+  const lines = stage.fields.map((f) => {
+    const entry = currentFields?.[f.key];
+    if (!entry) return `- ${f.key} ("${f.label}"): todavía sin definir.`;
+    const shortValue =
+      typeof entry.value === "string" ? entry.value.slice(0, 140) : JSON.stringify(entry.value).slice(0, 140);
+    const statusLabel =
+      {
+        validado_por_usuario: "✅ VALIDADO por el usuario — NO lo vuelvas a proponer salvo que pida cambiarlo",
+        editado_por_usuario: "✅ EDITADO/CERRADO por el usuario — NO lo vuelvas a proponer salvo que pida cambiarlo",
+        propuesto_por_ia: "⏳ propuesto, todavía esperando que el usuario valide/edite",
+      }[entry.status] || entry.status;
+    return `- ${f.key} ("${f.label}"): ${statusLabel}. Valor actual: "${shortValue}"`;
+  });
+  return `\n\nEstado de los campos de esta etapa (claves válidas: ${stage.fields
+    .map((f) => f.key)
+    .join(", ")}):\n${lines.join("\n")}`;
+}
+
+export function buildSystemPrompt({ stageNumber, accumulatedSummary, filesSummary, stageMeta, currentFields }) {
   const stage = getStage(stageNumber);
   const stageBlock = stage
     ? `\n\nEtapa actual: ${stage.number} — ${stage.name}\nObjetivo de la etapa: ${stage.shortGoal}\n\nInstrucciones específicas de esta etapa:\n${stage.systemInstructions}`
@@ -42,6 +72,8 @@ export function buildSystemPrompt({ stageNumber, accumulatedSummary, filesSummar
     ? `\n\nEstado interno de avance de esta etapa (por ejemplo, en qué paso del flujo vas): ${JSON.stringify(stageMeta)}`
     : "";
 
+  const fieldChecklist = buildFieldChecklist(stage, currentFields);
+
   return `${BASE_PROMPT}${stageBlock}
 
 Contexto de la sesión actual:
@@ -49,7 +81,7 @@ Contexto de la sesión actual:
 ${accumulatedSummary}
 
 - Insumos disponibles (archivos cargados y analizados):
-${filesSummary}${metaBlock}`;
+${filesSummary}${metaBlock}${fieldChecklist}`;
 }
 
 export function buildContextBlocks(stageDataRows, files) {
@@ -59,33 +91,41 @@ export function buildContextBlocks(stageDataRows, files) {
   };
 }
 
-export const RECORD_PROPOSAL_TOOL = {
-  name: "record_proposal",
-  description:
-    "Registra una propuesta formal y estructurada para un campo específico de la etapa actual, para que el usuario la pueda validar, editar, o descartar y escribir desde cero. Úsala cada vez que tengas una propuesta concreta lista (no la dejes solo mencionada en el texto de tu respuesta).",
-  input_schema: {
-    type: "object",
-    properties: {
-      field_key: {
-        type: "string",
-        description: "La clave del campo de la etapa actual al que corresponde esta propuesta (por ejemplo 'que_es', 'insight_consolidado', 'pilares').",
+// El tool se construye por etapa: field_key queda restringido (enum) a las claves
+// reales de esa etapa, para que el modelo nunca invente una clave nueva a mitad de
+// conversación (esto era la causa raíz del loop en la Etapa 2 — el modelo creaba
+// campos como "verdad_candidata" que nunca coincidían con el schema esperado).
+export function buildRecordProposalTool(stage) {
+  const keys = stage.fields.map((f) => f.key);
+  return {
+    name: "record_proposal",
+    description:
+      "Registra una propuesta formal y estructurada para un campo específico de la etapa actual, para que el usuario la pueda validar, editar, o descartar y escribir desde cero. Úsala SOLO cuando tengas una propuesta concreta y final para uno de los campos válidos de esta etapa — nunca para un borrador exploratorio o una opción entre varias (esas preséntalas como texto normal en tu respuesta).",
+    input_schema: {
+      type: "object",
+      properties: {
+        field_key: {
+          type: "string",
+          enum: keys,
+          description: `La clave EXACTA del campo al que corresponde esta propuesta. Las únicas claves válidas en esta etapa son: ${keys.join(", ")}. Nunca uses una clave distinta a estas.`,
+        },
+        field_label: {
+          type: "string",
+          description: "Etiqueta legible del campo, por ejemplo 'Qué es tu marca' o 'Insight consolidado'.",
+        },
+        value: {
+          description:
+            "El contenido propuesto. Puede ser un string, o un objeto/array si el campo lo requiere (por ejemplo los pilares de la propuesta de valor).",
+        },
+        rationale: {
+          type: "string",
+          description: "Justificación breve de por qué propones esto, especialmente importante para arquetipo y esencia en la Etapa 7.",
+        },
       },
-      field_label: {
-        type: "string",
-        description: "Etiqueta legible del campo, por ejemplo 'Qué es tu marca' o 'Insight consolidado'.",
-      },
-      value: {
-        description:
-          "El contenido propuesto. Puede ser un string, o un objeto/array si el campo lo requiere (por ejemplo los pilares de la propuesta de valor).",
-      },
-      rationale: {
-        type: "string",
-        description: "Justificación breve de por qué propones esto, especialmente importante para arquetipo y esencia en la Etapa 7.",
-      },
+      required: ["field_key", "field_label", "value"],
     },
-    required: ["field_key", "field_label", "value"],
-  },
-};
+  };
+}
 
 export const UPDATE_STAGE_META_TOOL = {
   name: "update_stage_meta",

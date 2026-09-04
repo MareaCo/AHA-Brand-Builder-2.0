@@ -12,7 +12,17 @@ const INSIGHT_STEPS = [
   "Validar",
 ];
 
-export default function ChatStage({ session, stageNumber, stageDef, onFieldsChanged, compact = false }) {
+export default function ChatStage({
+  session,
+  stageNumber,
+  stageDef,
+  onFieldsChanged,
+  compact = false,
+  canAdvance = false,
+  advancing = false,
+  onAdvance,
+  advanceLabel = "Continuar a la siguiente etapa →",
+}) {
   const [messages, setMessages] = useState([]);
   const [fields, setFields] = useState({});
   const [input, setInput] = useState("");
@@ -129,6 +139,17 @@ export default function ChatStage({ session, stageNumber, stageDef, onFieldsChan
       </div>
 
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+
+      {canAdvance && onAdvance && (
+        <button
+          type="button"
+          className="btn-primary mt-3 w-full justify-center"
+          onClick={onAdvance}
+          disabled={advancing}
+        >
+          {advancing ? "Avanzando..." : advanceLabel}
+        </button>
+      )}
 
       <form onSubmit={handleSend} className="mt-3 flex gap-2">
         <input

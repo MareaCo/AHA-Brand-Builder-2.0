@@ -32,12 +32,16 @@ const upload = multer({
   },
 });
 
+function withPreviewUrl(file) {
+  return { ...file, previewUrl: `/uploads/${path.basename(file.storagePath)}` };
+}
+
 router.get("/sessions/:sessionId/files", async (req, res) => {
   const files = await prisma.uploadedFile.findMany({
     where: { sessionId: req.params.sessionId },
     orderBy: { createdAt: "asc" },
   });
-  res.json(files);
+  res.json(files.map(withPreviewUrl));
 });
 
 router.post("/sessions/:sessionId/files", upload.single("file"), async (req, res) => {
@@ -68,13 +72,13 @@ router.post("/sessions/:sessionId/files", upload.single("file"), async (req, res
       where: { id: record.id },
       data: { extractedSummary: summary, extractedText },
     });
-    return res.status(201).json(updated);
+    return res.status(201).json(withPreviewUrl(updated));
   } catch (err) {
     const updated = await prisma.uploadedFile.update({
       where: { id: record.id },
       data: { extractedSummary: `No se pudo analizar automáticamente: ${err.message}` },
     });
-    return res.status(201).json(updated);
+    return res.status(201).json(withPreviewUrl(updated));
   }
 });
 

@@ -50,7 +50,7 @@ router.post("/sessions/:sessionId/stages/:stageNumber/messages", async (req, res
   const accumulatedSummary = buildAccumulatedSummary(allStageData);
   const filesSummary = buildFilesSummary(files);
   const currentRow = allStageData.find((r) => r.stageNumber === stageNumber);
-  const { meta: stageMeta } = parseContent(currentRow);
+  const { meta: stageMeta, fields: currentFields } = parseContent(currentRow);
 
   const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
   history.push({ role: "user", content: message });
@@ -59,7 +59,7 @@ router.post("/sessions/:sessionId/stages/:stageNumber/messages", async (req, res
 
   let result;
   try {
-    result = await runStageTurn({ stageNumber, accumulatedSummary, filesSummary, stageMeta, history });
+    result = await runStageTurn({ stageNumber, accumulatedSummary, filesSummary, stageMeta, currentFields, history });
   } catch (err) {
     return res.status(502).json({ error: err.message });
   }

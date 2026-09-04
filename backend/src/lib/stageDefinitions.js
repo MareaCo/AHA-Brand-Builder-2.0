@@ -55,37 +55,53 @@ No avances a la Etapa 2 hasta que ambos campos estén validados o editados por l
     kind: "chat",
     shortGoal: "El paso más importante: descubrir la verdad humana detrás de la marca, en 7 pasos estrictos.",
     fields: [
-      { key: "verdad", label: "Verdad candidata elegida" },
+      { key: "verdad", label: "Verdad" },
       { key: "necesidad", label: "Necesidad (verdad + necesidad)" },
       { key: "friccion", label: "Fricción (el 'pero...')" },
       { key: "insight_consolidado", label: "Insight consolidado (verdad + necesidad + fricción)" },
-      { key: "validacion", label: "Validación explícita de la persona" },
     ],
     systemInstructions: `
 Estás en la Etapa 2 — Insight de Marca. Esta es LA etapa más importante de toda la
-metodología. Debes seguir estos 7 pasos EN ORDEN, sin saltarte ninguno:
+metodología. Sigue estos 7 pasos EN ORDEN, sin saltarte ninguno, y respeta al pie de la
+letra las dos reglas de abajo (son la causa de casi todos los errores en esta etapa).
 
+Los 7 pasos:
 1. Contextualizar: explica con tus palabras que ahora se van a poner "el sombrero del
    consumidor" — van a dejar de pensar como dueños de la marca y van a pensar como la
    persona que la consume.
 2. Generar verdades candidatas: si hay estudios, reseñas o conversaciones de consumidor
-   cargadas como insumo, propone 1-2 verdades candidatas basadas en eso (usa
-   record_proposal con field_key "verdad_candidata"). Si no hay insumos de este tipo,
-   pregunta directamente qué verdad humana / tensión sienten que vive su consumidor.
-3. Elegir la verdad más resonante: ayuda a la persona a quedarse con UNA verdad (field_key
-   "verdad").
+   cargadas como insumo, escribe 1-2 verdades candidatas basadas en eso directamente en
+   tu mensaje de texto (en una lista simple). Si no hay insumos de este tipo, pregunta
+   directamente qué verdad humana / tensión sienten que vive su consumidor. NUNCA uses
+   record_proposal en este paso — son solo opciones para conversar, todavía no es una
+   propuesta final.
+3. Elegir la verdad más resonante: cuando la persona elija una (o entre los dos
+   confirmen cuál resuena más), AHÍ SÍ registra esa única verdad elegida con
+   record_proposal, field_key "verdad". Debe ser UNA sola frase corta, máximo 25
+   palabras — nunca un párrafo.
 4. Construir la necesidad: pregunta "¿por qué esa verdad se siente tan real para tu
-   consumidor?" y preséntalo ya integrado como un párrafo de verdad+necesidad
-   (field_key "necesidad"), validando en el camino.
-5. Construir la fricción: pide explícitamente que completen la frase con un "pero..."
-   (field_key "friccion").
-6. Consolidar: junta verdad + necesidad + fricción en un solo párrafo fluido
-   (field_key "insight_consolidado") y preséntalo como propuesta.
+   consumidor?" y registra con record_proposal, field_key "necesidad", un párrafo corto
+   (máximo 2 frases, 35 palabras) que combine la verdad del paso 3 con esa necesidad.
+5. Construir la fricción: pide explícitamente que completen la frase con un "pero...".
+   Registra con record_proposal, field_key "friccion", UNA sola frase corta (máximo 20
+   palabras).
+6. Consolidar: junta verdad + necesidad + fricción en un solo párrafo fluido y CORTO
+   (máximo 60 palabras, 3-4 frases — nunca más largo que eso) con record_proposal,
+   field_key "insight_consolidado".
 7. Validar explícitamente: pregunta literalmente algo como "¿cómo te sientes con este
-   insight?" y no avances a la Etapa 3 hasta tener una luz verde clara (field_key
-   "validacion").
+   insight?". La luz verde del usuario ES la validación del campo "insight_consolidado"
+   (cuando lo valide o edite desde la tarjeta) — no hay un campo separado para esto, así
+   que no sigas pidiendo confirmación una vez ese campo quede validado o editado.
 
-Nunca fusiones estos pasos ni los aceleres. Cada paso debe sentirse guiado, no apresurado.`,
+Dos reglas que no puedes romper:
+- Cada campo (verdad, necesidad, friccion, insight_consolidado) se registra UNA sola vez
+  con record_proposal. Antes de llamar record_proposal para cualquiera de estos campos,
+  revisa el checklist de estado de campos que te llega en el contexto: si ese campo ya
+  aparece como validado o editado, NO lo vuelvas a proponer — pasa directo al siguiente
+  paso pendiente. Si lo intentas de todas formas, el sistema rechazará la llamada.
+- Todo el contenido de esta etapa debe ser breve. Un insight largo desconecta: si te
+  estás extendiendo más de lo indicado en cada paso, resume antes de registrar la
+  propuesta.`,
   },
   {
     number: 3,

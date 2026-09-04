@@ -31,6 +31,7 @@ app.use("/api", exportRouter);
 app.use("/api/google-reviews", googleReviewsRouter);
 
 app.use("/exports", express.static(path.resolve(process.env.EXPORT_DIR || "./exports")));
+app.use("/uploads", express.static(path.resolve(process.env.UPLOAD_DIR || "./uploads")));
 
 app.use((err, req, res, next) => {
   console.error(err);
