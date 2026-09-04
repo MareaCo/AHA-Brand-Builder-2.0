@@ -10,6 +10,7 @@ export default function PyramidStagePage({ session, stageDef, onFieldsChanged })
   const [pyramid, setPyramid] = useState(null);
   const [coherence, setCoherence] = useState(null);
   const [checking, setChecking] = useState(false);
+  const [synthesizing, setSynthesizing] = useState(false);
   const canvasRef = useRef(null);
 
   function refresh() {
@@ -22,6 +23,16 @@ export default function PyramidStagePage({ session, stageDef, onFieldsChanged })
     const res = await api.editPyramidField(session.id, fieldKey, value, label);
     setPyramid(res);
     onFieldsChanged?.(res.ready);
+  }
+
+  async function synthesize() {
+    setSynthesizing(true);
+    try {
+      const res = await api.synthesizePyramid(session.id);
+      setPyramid((p) => ({ ...p, synthesized: res.synthesized }));
+    } finally {
+      setSynthesizing(false);
+    }
   }
 
   async function runCoherenceCheck() {
@@ -53,6 +64,9 @@ export default function PyramidStagePage({ session, stageDef, onFieldsChanged })
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-bold text-aha-navy">Pirámide de Marca</h2>
           <div className="flex gap-2">
+            <button className="btn-secondary text-xs" onClick={synthesize} disabled={synthesizing}>
+              {synthesizing ? "Sintetizando..." : "✦ Sintetizar para one-pager"}
+            </button>
             <button className="btn-secondary text-xs" onClick={runCoherenceCheck} disabled={checking}>
               {checking ? "Revisando..." : "Chequeo de coherencia"}
             </button>
@@ -81,7 +95,18 @@ export default function PyramidStagePage({ session, stageDef, onFieldsChanged })
           </div>
         )}
 
-        <PyramidCanvas ref={canvasRef} data={pyramid.data} editableKeys={NEW_FIELD_KEYS} onEditField={handleEditField} />
+        <PyramidCanvas
+          ref={canvasRef}
+          data={pyramid.data}
+          synthesized={pyramid.synthesized}
+          editableKeys={NEW_FIELD_KEYS}
+          onEditField={handleEditField}
+        />
+        {pyramid.synthesized && (
+          <p className="mt-2 text-[11px] text-slate-400">
+            Mostrando la versión sintetizada para el one-pager. Editar cualquier campo la invalida.
+          </p>
+        )}
 
         {!pyramid.ready && (
           <p className="mt-3 text-xs text-slate-500">

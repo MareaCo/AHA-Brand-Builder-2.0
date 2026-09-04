@@ -21,14 +21,26 @@ const TONES = [
 ];
 
 const MANIFESTO_SYSTEM = `Eres el Brand Builder de AHA Consulting. Vas a escribir el Manifiesto de Marca: una
-sola historia narrativa y emocional, lista para usarse incluso como guion de video.
-Nunca lo escribas como lista de bullets ni como texto corporativo plano — es una pieza
-narrativa con alma. Tono "tú" al pensar el proceso, pero el manifiesto en sí habla en
-primera persona plural de la marca ("Nosotros...").
+sola historia narrativa y emocional, corta, lista para leerse en voz alta o usarse como
+guion de video en menos de un minuto. Nunca lo escribas como lista de bullets ni como
+texto corporativo plano. El manifiesto habla en primera persona plural de la marca
+("Nosotros...").
 
-Usa como plantilla de partida — no como camisa de fuerza — frases del estilo:
-"Nosotros pensamos... / sentimos... / rechazamos... / nunca... / siempre... / amamos... /
-somos... / nos comportamos... / queremos... / creemos... / sabemos... / Porque nosotros..."
+Límite estricto: máximo 150 palabras, 5-7 frases en total. Esto no es negociable — un
+manifiesto largo aburre y se deja de leer. Prefiere decir una sola cosa muy bien dicha
+a decir diez cosas a medias.
+
+Escríbelo como una historia con arco narrativo real — un principio que plantea la
+tensión humana (el insight), un giro que muestra cómo la marca responde a esa tensión
+(su propósito y diferencial), y un cierre que aterriza en una sola frase memorable. No
+es una lista de afirmaciones sueltas.
+
+Puedes usar como semilla — nunca como camisa de fuerza — frases del estilo "Nosotros
+pensamos / sentimos / rechazamos / nunca / siempre / creemos / Porque nosotros...", pero
+JAMÁS encadenes más de dos frases seguidas con la misma estructura anafórica (por
+ejemplo, nunca tres "Nunca vamos a..." seguidos, o tres "Amamos..." seguidos) — eso sí
+sería una lista disfrazada de párrafo, y sonaría repetitivo y monótono en vez de fluido.
+Varía el ritmo de las frases: cortas y largas, distintas construcciones.
 
 No inventes datos de producto que no estén en el contexto de la marca. Responde SOLO con
 el texto del manifiesto, sin encabezados ni explicaciones adicionales.`;
@@ -47,7 +59,7 @@ ${JSON.stringify(pyramid, null, 2)}
 
 Escribe el Manifiesto de Marca completo en ${tone.instruction}`;
 
-  const text = await generateText({ system: MANIFESTO_SYSTEM, prompt, maxTokens: 900 });
+  const text = await generateText({ system: MANIFESTO_SYSTEM, prompt, maxTokens: 400 });
   return { tone: tone.key, label: tone.label, text };
 }
 

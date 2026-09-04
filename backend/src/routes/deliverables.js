@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db.js";
 import { buildPyramidData, pyramidIsReady } from "../lib/pyramidData.js";
+import { synthesizePyramidCopy } from "../lib/pyramidSynthesis.js";
 import { runCoherenceCheck } from "../lib/coherenceCheck.js";
 import { generateAllManifestoVariants, formatAsVideoScript, MANIFESTO_TONES } from "../lib/manifesto.js";
 import { setFieldStatus } from "../lib/stageDataStore.js";
@@ -9,12 +10,50 @@ import { getStage } from "../lib/stageDefinitions.js";
 export const router = Router();
 
 router.get("/sessions/:sessionId/pyramid", async (req, res) => {
-  const stageDataRows = await prisma.stageData.findMany({ where: { sessionId: req.params.sessionId } });
+  const { sessionId } = req.params;
+  const [stageDataRows, latestSynth] = await Promise.all([
+    prisma.stageData.findMany({ where: { sessionId } }),
+    prisma.deliverable.findFirst({ where: { sessionId, type: "piramide_sintesis" }, orderBy: { version: "desc" } }),
+  ]);
   res.json({
     data: buildPyramidData(stageDataRows),
+    synthesized: latestSynth ? JSON.parse(latestSynth.content) : null,
     ready: pyramidIsReady(stageDataRows),
     stage7Fields: getStage(7).fields,
   });
+});
+
+// Condensa el contenido ya construido en frases cortas para el one-pager gráfico.
+// Se dispara a demanda (botón "Sintetizar"), no automáticamente, para no gastar
+// llamadas de más — y se vuelve a invalidar cuando el usuario edita un campo (ver
+// PUT /pyramid/fields abajo, que borra la síntesis guardada).
+router.post("/sessions/:sessionId/pyramid/synthesize", async (req, res) => {
+  const { sessionId } = req.params;
+  const stageDataRows = await prisma.stageData.findMany({ where: { sessionId } });
+  const data = buildPyramidData(stageDataRows);
+
+  let synthesized;
+  try {
+    synthesized = await synthesizePyramidCopy(data);
+  } catch (err) {
+    return res.status(502).json({ error: err.message });
+  }
+
+  const latest = await prisma.deliverable.findFirst({
+    where: { sessionId, type: "piramide_sintesis" },
+    orderBy: { version: "desc" },
+  });
+  await prisma.deliverable.create({
+    data: {
+      sessionId,
+      type: "piramide_sintesis",
+      content: JSON.stringify(synthesized),
+      format: "text",
+      version: (latest?.version || 0) + 1,
+    },
+  });
+
+  res.json({ synthesized });
 });
 
 router.put("/sessions/:sessionId/pyramid/fields/:fieldKey", async (req, res) => {
@@ -25,8 +64,11 @@ router.put("/sessions/:sessionId/pyramid/fields/:fieldKey", async (req, res) => 
   if (!fieldDef) return res.status(400).json({ error: "Ese campo no pertenece a la Pirámide (Etapa 7)." });
 
   await setFieldStatus(sessionId, 7, fieldKey, { value, label: label || fieldDef.label, status: "editado_por_usuario" });
+  // La síntesis corta guardada queda obsoleta apenas se edita un campo — se borra para
+  // que la próxima carga muestre el texto completo hasta que se vuelva a sintetizar.
+  await prisma.deliverable.deleteMany({ where: { sessionId, type: "piramide_sintesis" } });
   const stageDataRows = await prisma.stageData.findMany({ where: { sessionId } });
-  res.json({ data: buildPyramidData(stageDataRows), ready: pyramidIsReady(stageDataRows) });
+  res.json({ data: buildPyramidData(stageDataRows), ready: pyramidIsReady(stageDataRows), synthesized: null });
 });
 
 router.post("/sessions/:sessionId/pyramid/coherence-check", async (req, res) => {

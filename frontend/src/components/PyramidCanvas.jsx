@@ -11,24 +11,42 @@ function renderValue(value) {
   return JSON.stringify(value);
 }
 
-function Block({ label, value, editable, onSave, tone = "light" }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(renderValue(value));
+// Insets (% del ancho del trapezoide) de arriba/abajo por nivel, de la base (0)
+// a la cúspide (5) — cada banda se angosta hacia arriba y su borde superior
+// coincide con el borde inferior de la banda de encima, dibujando la silueta
+// continua de una pirámide.
+const LEVEL_INSETS = [
+  { top: 4, bottom: 0 }, // 0 — base (entorno | target | asociaciones)
+  { top: 9, bottom: 4 }, // 1 — insight
+  { top: 16, bottom: 9 }, // 2 — RTB | personalidad
+  { top: 25, bottom: 16 }, // 3 — beneficios racional | emocional
+  { top: 37, bottom: 25 }, // 4 — propósito
+  { top: 50, bottom: 37 }, // 5 — esencia (apex, triángulo)
+];
 
-  const toneClasses = {
-    light: "bg-white/90 text-aha-navy",
-    navy: "bg-aha-navy text-white",
-    periwinkle: "bg-aha-periwinkle text-white",
-    lime: "bg-aha-lime text-aha-navy",
-    pale: "bg-aha-pale text-aha-navy",
-  };
+function clipPathFor(level) {
+  const { top, bottom } = LEVEL_INSETS[level];
+  return `polygon(${top}% 0%, ${100 - top}% 0%, ${100 - bottom}% 100%, ${bottom}% 100%)`;
+}
+
+const TONE_BG = {
+  navy: "#282072",
+  periwinkle: "#5e67d3",
+  blue: "#8b93e0",
+  lime: "#b3de4a",
+  pale: "#e3f2b8",
+};
+
+function Cell({ label, value, editable, onSave, dark }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
 
   if (editing) {
     return (
-      <div className="flex flex-col gap-1 rounded-lg bg-white p-2 shadow-inner">
+      <div className="flex flex-1 flex-col gap-1 rounded-lg bg-white p-2 shadow-inner" onClick={(e) => e.stopPropagation()}>
         <span className="text-[9px] font-bold uppercase text-slate-400">{label}</span>
         <textarea
-          className="w-full rounded border border-slate-200 p-1 text-[11px]"
+          className="w-full rounded border border-slate-200 p-1 text-[11px] text-slate-800"
           rows={3}
           autoFocus
           value={draft}
@@ -61,94 +79,135 @@ function Block({ label, value, editable, onSave, tone = "light" }) {
         setEditing(true);
       }}
       className={[
-        "flex flex-col gap-0.5 rounded-lg p-2 text-center",
-        toneClasses[tone],
-        editable ? "cursor-pointer hover:ring-2 hover:ring-aha-periwinkle" : "",
+        "flex flex-1 flex-col items-center gap-0.5 px-2 py-1.5 text-center",
+        editable ? "cursor-pointer hover:opacity-80" : "",
       ].join(" ")}
       title={editable ? "Click para editar" : undefined}
     >
-      <span className="text-[9px] font-bold uppercase opacity-70">{label}</span>
-      <span className="text-[11px] leading-tight whitespace-pre-line">{renderValue(value) || "—"}</span>
+      <span className={["text-[9px] font-bold uppercase tracking-wide", dark ? "text-white/70" : "text-aha-navy/60"].join(" ")}>
+        {label}
+      </span>
+      <span className={["text-[11px] font-medium leading-tight", dark ? "text-white" : "text-aha-navy"].join(" ")}>
+        {renderValue(value) || "—"}
+      </span>
     </div>
   );
 }
 
-const PyramidCanvas = forwardRef(function PyramidCanvas({ data, editableKeys, onEditField }, ref) {
+function Band({ level, tone, dividers = true, children }) {
+  return (
+    <div
+      className="flex w-full"
+      style={{ clipPath: clipPathFor(level), backgroundColor: TONE_BG[tone], minHeight: level === 5 ? 64 : 56 }}
+    >
+      {children.map((child, i) => (
+        <div
+          key={i}
+          className={dividers && i > 0 ? "flex flex-1 border-l border-dashed border-white/40" : "flex flex-1"}
+        >
+          {child}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, editableKeys, onEditField }, ref) {
   const editable = (key) => editableKeys?.includes(key);
+  const v = (key, group) => (synthesized?.[group]?.[key] ?? data[group]?.[key]) ?? null;
 
   return (
-    <div ref={ref} className="rounded-3xl bg-gradient-to-b from-aha-navy/5 to-white p-6">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-2">
-        <div className="w-1/3">
-          <Block
-            label="Esencia"
-            value={data.cuspide.esencia}
-            tone="navy"
-            editable={editable("esencia")}
-            onSave={(v) => onEditField("esencia", v, "Esencia")}
-          />
+    <div ref={ref} className="rounded-3xl bg-white p-6">
+      <div className="mx-auto flex max-w-2xl gap-4">
+        <div className="flex flex-1 flex-col gap-[2px]">
+          <Band level={5} tone="navy" dividers={false}>
+            {[
+              <Cell
+                key="esencia"
+                label="Esencia"
+                value={v("esencia", "cuspide")}
+                dark
+                editable={editable("esencia")}
+                onSave={(val) => onEditField("esencia", val, "Esencia")}
+              />,
+            ]}
+          </Band>
+
+          <Band level={4} tone="periwinkle" dividers={false}>
+            {[<Cell key="proposito" label="Propósito" value={v("proposito", "alto")} dark editable={false} />]}
+          </Band>
+
+          <Band level={3} tone="blue" dividers>
+            {[
+              <Cell key="br" label="Beneficio racional" value={v("beneficios_racionales", "medio")} dark editable={false} />,
+              <Cell key="be" label="Beneficio emocional" value={v("beneficios_emocionales", "medio")} dark editable={false} />,
+            ]}
+          </Band>
+
+          <Band level={2} tone="periwinkle" dividers>
+            {[
+              <Cell key="rtb" label="Razones para creer" value={v("razones_para_creer", "medio")} dark editable={false} />,
+              <Cell
+                key="personalidad"
+                label="Personalidad"
+                value={v("personalidad", "medio")}
+                dark
+                editable={editable("personalidad")}
+                onSave={(val) => onEditField("personalidad", val, "Personalidad")}
+              />,
+            ]}
+          </Band>
+
+          <Band level={1} tone="lime" dividers={false}>
+            {[<Cell key="insight" label="Insight" value={v("insight", "base")} editable={false} />]}
+          </Band>
+
+          <Band level={0} tone="pale" dividers>
+            {[
+              <Cell
+                key="entorno"
+                label="Entorno competitivo"
+                value={v("entorno_competitivo", "base")}
+                editable={editable("entorno_competitivo")}
+                onSave={(val) => onEditField("entorno_competitivo", val, "Entorno competitivo")}
+              />,
+              <Cell key="target" label="★ Target" value={v("target", "base")} editable={false} />,
+              <Cell
+                key="asociaciones"
+                label="Asociaciones de marca"
+                value={v("asociaciones_marca", "base")}
+                editable={editable("asociaciones_marca")}
+                onSave={(val) => onEditField("asociaciones_marca", val, "Asociaciones de marca")}
+              />,
+            ]}
+          </Band>
         </div>
 
-        <div className="w-2/3">
-          <Block
-            label="Propósito"
-            value={data.alto.proposito}
-            tone="periwinkle"
-            editable={false}
-          />
-        </div>
-
-        <div className="grid w-full grid-cols-3 gap-2">
-          <Block
-            label="RTB"
-            value={data.medio.razones_para_creer}
-            editable={false}
-          />
-          <Block
-            label="Personalidad"
-            value={data.medio.personalidad}
-            editable={editable("personalidad")}
-            onSave={(v) => onEditField("personalidad", v, "Personalidad")}
-          />
-          <Block
-            label="Beneficio racional"
-            value={data.medio.beneficios_racionales}
-            editable={false}
-          />
-        </div>
-        <div className="w-1/3">
-          <Block label="Beneficio emocional" value={data.medio.beneficios_emocionales} editable={false} />
-        </div>
-
-        <div className="grid w-full grid-cols-4 gap-2">
-          <Block label="Entorno competitivo" value={data.base.entorno_competitivo} tone="pale"
-            editable={editable("entorno_competitivo")}
-            onSave={(v) => onEditField("entorno_competitivo", v, "Entorno competitivo")}
-          />
-          <Block label="Target" value={data.base.target} tone="pale" editable={false} />
-          <Block
-            label="Asociaciones de marca"
-            value={data.base.asociaciones_marca}
-            tone="pale"
-            editable={editable("asociaciones_marca")}
-            onSave={(v) => onEditField("asociaciones_marca", v, "Asociaciones de marca")}
-          />
-          <Block label="Insight" value={data.base.insight} tone="pale" editable={false} />
-        </div>
-
-        <div className="mt-4 grid w-full grid-cols-2 gap-2 border-t border-dashed border-slate-200 pt-4">
-          <Block
-            label="Arquetipo dominante / secundario"
-            value={[data.aparte.arquetipo_dominante, data.aparte.arquetipo_secundario].filter(Boolean).join(" / ")}
-            tone="lime"
-            editable={editable("arquetipo_dominante")}
-            onSave={(v) => {
-              const [dominante, secundario] = v.split("/").map((s) => s.trim());
-              onEditField("arquetipo_dominante", dominante || v, "Arquetipo dominante");
-              if (secundario) onEditField("arquetipo_secundario", secundario, "Arquetipo secundario");
+        <div className="w-40 shrink-0 space-y-3">
+          <div
+            className="cursor-pointer rounded-xl bg-aha-lime/20 p-3 text-center hover:bg-aha-lime/30"
+            onClick={() => {
+              const v1 = prompt("Arquetipo dominante:", data.aparte.arquetipo_dominante || "");
+              if (v1 != null) onEditField("arquetipo_dominante", v1, "Arquetipo dominante");
             }}
-          />
-          <Block label="Territorio de marca" value={data.aparte.territorio_marca} tone="lime" editable={false} />
+          >
+            <p className="text-[9px] font-bold uppercase tracking-wide text-aha-navy/60">Arquetipo dominante</p>
+            <p className="mt-0.5 text-xs font-semibold text-aha-navy">{data.aparte.arquetipo_dominante || "—"}</p>
+          </div>
+          <div
+            className="cursor-pointer rounded-xl bg-aha-lime/10 p-3 text-center hover:bg-aha-lime/20"
+            onClick={() => {
+              const v2 = prompt("Arquetipo secundario:", data.aparte.arquetipo_secundario || "");
+              if (v2 != null) onEditField("arquetipo_secundario", v2, "Arquetipo secundario");
+            }}
+          >
+            <p className="text-[9px] font-bold uppercase tracking-wide text-aha-navy/60">Arquetipo secundario</p>
+            <p className="mt-0.5 text-xs font-semibold text-aha-navy">{data.aparte.arquetipo_secundario || "—"}</p>
+          </div>
+          <div className="rounded-xl bg-aha-pale p-3 text-center">
+            <p className="text-[9px] font-bold uppercase tracking-wide text-aha-navy/60">Territorio de marca</p>
+            <p className="mt-0.5 text-xs font-medium text-aha-navy">{data.aparte.territorio_marca || "—"}</p>
+          </div>
         </div>
       </div>
     </div>

@@ -6,8 +6,11 @@ import SidePanel from "../components/SidePanel.jsx";
 import FileUpload from "../components/FileUpload.jsx";
 import ChatStage from "../components/ChatStage.jsx";
 import PyramidStagePage from "./PyramidStagePage.jsx";
+import PropuestaValorStagePage from "./PropuestaValorStagePage.jsx";
 import ManifestoStagePage from "./ManifestoStagePage.jsx";
 import ClosingPage from "./ClosingPage.jsx";
+
+const SPECIAL_STAGE_KEYS = ["insumos", "piramide", "propuesta_valor", "manifiesto"];
 
 export default function SessionWorkspace() {
   const { id } = useParams();
@@ -38,6 +41,14 @@ export default function SessionWorkspace() {
       setStageComplete(Boolean(stageDef?.complete));
     }
   }, [session, viewStage]);
+
+  // El panel lateral y las vistas gráficas (Pirámide, Propuesta de Valor) leen
+  // session.stageData, que solo se recarga con refresh(). Sin esto, se ven
+  // desactualizados mientras se chatea (solo se actualizaba el flag de completitud).
+  function syncAfterFieldsChanged(complete) {
+    setStageComplete(complete);
+    refresh();
+  }
 
   if (!session || viewStage === null) {
     return <div className="p-10 text-sm text-slate-400">Cargando sesión...</div>;
@@ -118,7 +129,7 @@ export default function SessionWorkspace() {
               session={session}
               stageNumber={0}
               stageDef={stageDef}
-              onFieldsChanged={() => setStageComplete(true)}
+              onFieldsChanged={() => syncAfterFieldsChanged(true)}
               canAdvance={canAdvance}
               advancing={advancing}
               onAdvance={advance}
@@ -132,18 +143,26 @@ export default function SessionWorkspace() {
         <PyramidStagePage
           session={session}
           stageDef={stageDef}
-          onFieldsChanged={(ready) => setStageComplete(Boolean(ready))}
+          onFieldsChanged={(ready) => syncAfterFieldsChanged(Boolean(ready))}
+        />
+      )}
+
+      {stageDef.key === "propuesta_valor" && (
+        <PropuestaValorStagePage
+          session={session}
+          stageDef={stageDef}
+          onFieldsChanged={(complete) => syncAfterFieldsChanged(complete)}
         />
       )}
 
       {stageDef.key === "manifiesto" && <ManifestoStagePage session={session} />}
 
-      {!["insumos", "piramide", "manifiesto"].includes(stageDef.key) && (
+      {!SPECIAL_STAGE_KEYS.includes(stageDef.key) && (
         <ChatStage
           session={session}
           stageNumber={viewStage}
           stageDef={stageDef}
-          onFieldsChanged={(complete) => setStageComplete(complete)}
+          onFieldsChanged={(complete) => syncAfterFieldsChanged(complete)}
           canAdvance={canAdvance}
           advancing={advancing}
           onAdvance={advance}

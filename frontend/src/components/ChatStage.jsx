@@ -38,6 +38,7 @@ export default function ChatStage({
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -128,13 +129,11 @@ export default function ChatStage({
 
   const visibleMessages = messages.filter((m) => !isHidden(m));
 
-  // Siempre se muestran TODOS los campos de la etapa desde el inicio (no solo los
-  // que la IA ya haya propuesto) — así el usuario nunca queda bloqueado si la
-  // conversación no llega a registrar una propuesta formal para alguno de ellos.
-  const allFieldEntries = (stageDef?.fields || []).map((f) => [
-    f.key,
-    fields[f.key] || { label: f.label, value: "", status: "sin_definir" },
-  ]);
+  // Solo se muestran como tarjeta los campos que la IA ya propuso (o que el usuario
+  // ya completó) — así la etapa se siente como una conversación que va construyendo
+  // cosas, no como un formulario en blanco esperando ser llenado.
+  const proposedFieldEntries = Object.entries(fields);
+  const pendingFieldDefs = (stageDef?.fields || []).filter((f) => !fields[f.key]);
 
   return (
     <div className={compact ? "flex flex-col h-[420px]" : "flex flex-col"}>
@@ -176,9 +175,9 @@ export default function ChatStage({
           </div>
         ))}
 
-        {loaded && !starting && allFieldEntries.length > 0 && (
+        {loaded && !starting && proposedFieldEntries.length > 0 && (
           <div className="space-y-2 pt-2">
-            {allFieldEntries.map(([key, field]) => (
+            {proposedFieldEntries.map(([key, field]) => (
               <ProposalCard key={key} fieldKey={key} field={field} onValidate={handleValidate} onEdit={handleEdit} />
             ))}
           </div>
@@ -187,6 +186,38 @@ export default function ChatStage({
       </div>
 
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+
+      {loaded && !starting && pendingFieldDefs.length > 0 && (
+        <div className="mt-3">
+          {!showManual ? (
+            <button
+              type="button"
+              className="text-[11px] text-slate-400 hover:text-aha-periwinkle hover:underline"
+              onClick={() => setShowManual(true)}
+            >
+              ¿La conversación no está avanzando? Completa tú misma lo que falte →
+            </button>
+          ) : (
+            <div className="space-y-2 rounded-xl bg-slate-50 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500">Completar manualmente</span>
+                <button type="button" className="text-[11px] text-slate-400 hover:underline" onClick={() => setShowManual(false)}>
+                  ocultar
+                </button>
+              </div>
+              {pendingFieldDefs.map((f) => (
+                <ProposalCard
+                  key={f.key}
+                  fieldKey={f.key}
+                  field={{ label: f.label, value: "", status: "sin_definir" }}
+                  onValidate={handleValidate}
+                  onEdit={handleEdit}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {canAdvance && onAdvance && (
         <button

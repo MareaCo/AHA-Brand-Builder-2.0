@@ -5,13 +5,17 @@ import PyramidCanvas from "../components/PyramidCanvas.jsx";
 
 export default function ClosingPage({ session }) {
   const [pyramid, setPyramid] = useState(null);
+  const [synthesized, setSynthesized] = useState(null);
   const [manifesto, setManifesto] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    api.getPyramid(session.id).then((r) => setPyramid(r.data));
+    api.getPyramid(session.id).then((r) => {
+      setPyramid(r.data);
+      setSynthesized(r.synthesized);
+    });
     api.getManifesto(session.id).then((r) => setManifesto(r.variants));
   }, [session.id]);
 
@@ -69,7 +73,7 @@ export default function ClosingPage({ session }) {
       {pyramid && (
         <div className="mt-8">
           <h3 className="mb-2 text-lg font-semibold text-aha-navy">Pirámide de Marca</h3>
-          <PyramidCanvas ref={canvasRef} data={pyramid} editableKeys={[]} onEditField={() => {}} />
+          <PyramidCanvas ref={canvasRef} data={pyramid} synthesized={synthesized} editableKeys={[]} onEditField={() => {}} />
         </div>
       )}
 

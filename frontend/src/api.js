@@ -73,6 +73,7 @@ export const api = {
     put(`/sessions/${sessionId}/pyramid/fields/${fieldKey}`, { value, label }),
   coherenceCheck: (sessionId) => post(`/sessions/${sessionId}/pyramid/coherence-check`),
   exportPyramid: (sessionId) => post(`/sessions/${sessionId}/pyramid/export`),
+  synthesizePyramid: (sessionId) => post(`/sessions/${sessionId}/pyramid/synthesize`),
 
   getManifesto: (sessionId) => get(`/sessions/${sessionId}/manifesto`),
   generateManifesto: (sessionId) => post(`/sessions/${sessionId}/manifesto/generate`),
