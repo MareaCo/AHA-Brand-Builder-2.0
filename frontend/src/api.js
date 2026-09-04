@@ -60,6 +60,7 @@ export const api = {
 
   getStage: (sessionId, stageNumber) => get(`/sessions/${sessionId}/stages/${stageNumber}`),
   getMessages: (sessionId, stageNumber) => get(`/sessions/${sessionId}/stages/${stageNumber}/messages`),
+  startStage: (sessionId, stageNumber) => post(`/sessions/${sessionId}/stages/${stageNumber}/start`),
   sendMessage: (sessionId, stageNumber, message) =>
     post(`/sessions/${sessionId}/stages/${stageNumber}/messages`, { message }),
   validateField: (sessionId, stageNumber, fieldKey) =>

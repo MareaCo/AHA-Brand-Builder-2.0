@@ -20,7 +20,7 @@ export default function ProposalCard({ fieldKey, field, onValidate, onEdit }) {
   const [draft, setDraft] = useState(renderValue(field.value));
   const [busy, setBusy] = useState(false);
 
-  const isPending = field.status === "propuesto_por_ia";
+  const isUndefined = field.status === "sin_definir";
   const isDone = field.status === "validado_por_usuario" || field.status === "editado_por_usuario";
 
   async function run(fn) {
@@ -36,7 +36,11 @@ export default function ProposalCard({ fieldKey, field, onValidate, onEdit }) {
     <div
       className={[
         "rounded-xl border p-3 text-sm",
-        isDone ? "border-aha-lime bg-aha-lime/10" : "border-aha-periwinkle/30 bg-aha-periwinkle/5",
+        isDone
+          ? "border-aha-lime bg-aha-lime/10"
+          : isUndefined
+          ? "border-slate-200 bg-slate-50"
+          : "border-aha-periwinkle/30 bg-aha-periwinkle/5",
       ].join(" ")}
     >
       <div className="flex items-center justify-between">
@@ -46,33 +50,43 @@ export default function ProposalCard({ fieldKey, field, onValidate, onEdit }) {
 
       {mode === null && (
         <>
-          <p className="mt-1.5 whitespace-pre-line text-slate-700">{renderValue(field.value)}</p>
+          {isUndefined ? (
+            <p className="mt-1.5 text-slate-400 italic">
+              Todavía no se ha propuesto nada aquí — si ya lo tienes claro, puedes escribirlo tú mismo.
+            </p>
+          ) : (
+            <p className="mt-1.5 whitespace-pre-line text-slate-700">{renderValue(field.value)}</p>
+          )}
           {field.rationale && (
             <p className="mt-1 text-xs italic text-slate-500">Por qué lo propongo: {field.rationale}</p>
           )}
           {!isDone && (
             <div className="mt-2.5 flex flex-wrap gap-2">
+              {!isUndefined && (
+                <>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="btn-accent !px-3 !py-1 text-xs"
+                    onClick={() => run(() => onValidate(fieldKey))}
+                  >
+                    Validar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary !px-3 !py-1 text-xs"
+                    onClick={() => {
+                      setDraft(renderValue(field.value));
+                      setMode("edit");
+                    }}
+                  >
+                    Editar
+                  </button>
+                </>
+              )}
               <button
                 type="button"
-                disabled={busy}
-                className="btn-accent !px-3 !py-1 text-xs"
-                onClick={() => run(() => onValidate(fieldKey))}
-              >
-                Validar
-              </button>
-              <button
-                type="button"
-                className="btn-secondary !px-3 !py-1 text-xs"
-                onClick={() => {
-                  setDraft(renderValue(field.value));
-                  setMode("edit");
-                }}
-              >
-                Editar
-              </button>
-              <button
-                type="button"
-                className="btn-ghost !px-3 !py-1 text-xs"
+                className={isUndefined ? "btn-secondary !px-3 !py-1 text-xs" : "btn-ghost !px-3 !py-1 text-xs"}
                 onClick={() => {
                   setDraft("");
                   setMode("scratch");

@@ -12,6 +12,14 @@ const INSIGHT_STEPS = [
   "Validar",
 ];
 
+function isHidden(message) {
+  try {
+    return Boolean(JSON.parse(message.meta || "{}").hidden);
+  } catch {
+    return false;
+  }
+}
+
 export default function ChatStage({
   session,
   stageNumber,
@@ -27,21 +35,46 @@ export default function ChatStage({
   const [fields, setFields] = useState({});
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
-    setLoaded(false);
-    Promise.all([api.getMessages(session.id, stageNumber), api.getStage(session.id, stageNumber)]).then(
-      ([msgs, stage]) => {
-        if (cancelled) return;
-        setMessages(msgs);
+
+    async function load() {
+      setLoaded(false);
+      let msgs = await api.getMessages(session.id, stageNumber);
+      const stage = await api.getStage(session.id, stageNumber);
+      if (cancelled) return;
+
+      if (msgs.length === 0) {
+        setStarting(true);
+        try {
+          const result = await api.startStage(session.id, stageNumber);
+          if (cancelled) return;
+          if (!result.alreadyStarted) {
+            setFields(result.stageContent?.fields || {});
+            onFieldsChanged?.(result.stageComplete);
+          }
+          msgs = await api.getMessages(session.id, stageNumber);
+        } catch (err) {
+          if (!cancelled) setError(err.message);
+        } finally {
+          if (!cancelled) setStarting(false);
+        }
+      } else {
         setFields(stage.content.fields || {});
+      }
+
+      if (!cancelled) {
+        setMessages(msgs);
         setLoaded(true);
       }
-    );
+    }
+
+    load();
     return () => {
       cancelled = true;
     };
@@ -93,8 +126,18 @@ export default function ChatStage({
     });
   }
 
+  const visibleMessages = messages.filter((m) => !isHidden(m));
+
+  // Siempre se muestran TODOS los campos de la etapa desde el inicio (no solo los
+  // que la IA ya haya propuesto) — así el usuario nunca queda bloqueado si la
+  // conversación no llega a registrar una propuesta formal para alguno de ellos.
+  const allFieldEntries = (stageDef?.fields || []).map((f) => [
+    f.key,
+    fields[f.key] || { label: f.label, value: "", status: "sin_definir" },
+  ]);
+
   return (
-    <div className={compact ? "flex flex-col h-[420px]" : "flex flex-col h-full"}>
+    <div className={compact ? "flex flex-col h-[420px]" : "flex flex-col"}>
       {stageNumber === 2 && !compact && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {INSIGHT_STEPS.map((label, i) => (
@@ -108,14 +151,19 @@ export default function ChatStage({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto rounded-2xl bg-white/60 p-4 space-y-3">
-        {!loaded && <p className="text-sm text-slate-400">Cargando conversación...</p>}
-        {loaded && messages.length === 0 && (
+      <div
+        className={
+          compact
+            ? "flex-1 overflow-y-auto rounded-2xl bg-white/60 p-4 space-y-3"
+            : "rounded-2xl bg-white/60 p-4 space-y-3"
+        }
+      >
+        {(!loaded || starting) && (
           <p className="text-sm text-slate-400">
-            Escribe algo para comenzar esta etapa, o cuéntale al Brand Builder que ya cargaste insumos.
+            {starting ? "Preparando esta etapa..." : "Cargando conversación..."}
           </p>
         )}
-        {messages.map((m) => (
+        {visibleMessages.map((m) => (
           <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
             <div
               className={[
@@ -128,9 +176,9 @@ export default function ChatStage({
           </div>
         ))}
 
-        {Object.entries(fields).length > 0 && (
+        {loaded && !starting && allFieldEntries.length > 0 && (
           <div className="space-y-2 pt-2">
-            {Object.entries(fields).map(([key, field]) => (
+            {allFieldEntries.map(([key, field]) => (
               <ProposalCard key={key} fieldKey={key} field={field} onValidate={handleValidate} onEdit={handleEdit} />
             ))}
           </div>

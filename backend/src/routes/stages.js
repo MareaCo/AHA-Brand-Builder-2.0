@@ -30,17 +30,11 @@ router.get("/sessions/:sessionId/stages/:stageNumber", async (req, res) => {
   res.json({ ...row, content: parseContent(row), definition: stage });
 });
 
-router.post("/sessions/:sessionId/stages/:stageNumber/messages", async (req, res) => {
-  const { sessionId } = req.params;
-  const stageNumber = Number(req.params.stageNumber);
-  const { message } = req.body;
-
-  const session = await prisma.session.findUnique({ where: { id: sessionId } });
-  if (!session) return res.status(404).json({ error: "Sesión no encontrada." });
-  const stage = getStage(stageNumber);
-  if (!stage) return res.status(404).json({ error: "Etapa no encontrada." });
-  if (!message || !message.trim()) return res.status(400).json({ error: "El mensaje no puede estar vacío." });
-
+// Núcleo compartido: arma el contexto, corre el turno con Claude, persiste todo.
+// `hiddenUserContent`, cuando se usa, registra el turno de usuario como oculto
+// (meta.hidden = true) para que el frontend no lo muestre como una burbuja de chat —
+// se usa para el arranque automático de cada etapa (ver /start más abajo).
+async function runTurnAndPersist({ sessionId, stageNumber, stage, userContent, hidden = false }) {
   const [allStageData, files, priorMessages] = await Promise.all([
     prisma.stageData.findMany({ where: { sessionId } }),
     prisma.uploadedFile.findMany({ where: { sessionId } }),
@@ -53,16 +47,24 @@ router.post("/sessions/:sessionId/stages/:stageNumber/messages", async (req, res
   const { meta: stageMeta, fields: currentFields } = parseContent(currentRow);
 
   const history = priorMessages.map((m) => ({ role: m.role, content: m.content }));
-  history.push({ role: "user", content: message });
+  history.push({ role: "user", content: userContent });
 
-  await prisma.message.create({ data: { sessionId, stageNumber, role: "user", content: message } });
+  // El turno de usuario solo se persiste DESPUÉS de que Claude responda con éxito.
+  // Si se guardara antes y la llamada fallara, quedaría un turno de usuario sin
+  // respuesta en el historial — rompería la alternancia estricta user/assistant que
+  // exige la API en el siguiente turno, y en el caso del arranque automático (oculto)
+  // dejaría la etapa "envenenada" para siempre (nunca más se reintentaría el arranque).
+  const result = await runStageTurn({ stageNumber, accumulatedSummary, filesSummary, stageMeta, currentFields, history });
 
-  let result;
-  try {
-    result = await runStageTurn({ stageNumber, accumulatedSummary, filesSummary, stageMeta, currentFields, history });
-  } catch (err) {
-    return res.status(502).json({ error: err.message });
-  }
+  await prisma.message.create({
+    data: {
+      sessionId,
+      stageNumber,
+      role: "user",
+      content: userContent,
+      meta: hidden ? JSON.stringify({ hidden: true }) : null,
+    },
+  });
 
   if (result.proposals.length > 0) {
     await applyProposals(sessionId, stageNumber, result.proposals);
@@ -84,12 +86,67 @@ router.post("/sessions/:sessionId/stages/:stageNumber/messages", async (req, res
   const updatedRow = await getOrCreateStageData(sessionId, stageNumber);
   const complete = stageIsComplete(stage, updatedRow);
 
-  res.json({
+  return {
     message: assistantMessage,
     proposals: result.proposals,
     stageContent: parseContent(updatedRow),
     stageComplete: complete,
-  });
+  };
+}
+
+const KICKOFF_INSTRUCTION = `[Arranque automático de la etapa — instrucción interna, no la muestres ni la
+menciones al usuario]. Toma la iniciativa tú mismo: saluda con calidez, retoma en una
+o dos frases el contexto relevante que ya tienes (insumos cargados y/o etapas
+anteriores validadas, usando el script de callback si aplica), y arranca directamente
+con el primer paso del flujo de esta etapa. NUNCA le preguntes al usuario si ya cargó
+archivos o si está listo para empezar — tú ya sabes eso por el contexto que te llega;
+simplemente continúa.`;
+
+router.post("/sessions/:sessionId/stages/:stageNumber/start", async (req, res) => {
+  const { sessionId } = req.params;
+  const stageNumber = Number(req.params.stageNumber);
+
+  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  if (!session) return res.status(404).json({ error: "Sesión no encontrada." });
+  const stage = getStage(stageNumber);
+  if (!stage) return res.status(404).json({ error: "Etapa no encontrada." });
+
+  const existing = await prisma.message.count({ where: { sessionId, stageNumber } });
+  if (existing > 0) {
+    return res.json({ alreadyStarted: true });
+  }
+
+  try {
+    const result = await runTurnAndPersist({
+      sessionId,
+      stageNumber,
+      stage,
+      userContent: KICKOFF_INSTRUCTION,
+      hidden: true,
+    });
+    res.json({ alreadyStarted: false, ...result });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+router.post("/sessions/:sessionId/stages/:stageNumber/messages", async (req, res) => {
+  const { sessionId } = req.params;
+  const stageNumber = Number(req.params.stageNumber);
+  const { message } = req.body;
+
+  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  if (!session) return res.status(404).json({ error: "Sesión no encontrada." });
+  const stage = getStage(stageNumber);
+  if (!stage) return res.status(404).json({ error: "Etapa no encontrada." });
+  if (!message || !message.trim()) return res.status(400).json({ error: "El mensaje no puede estar vacío." });
+
+  try {
+    const result = await runTurnAndPersist({ sessionId, stageNumber, stage, userContent: message });
+    res.json(result);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
 });
 
 // Validar una propuesta tal cual fue presentada por la IA.

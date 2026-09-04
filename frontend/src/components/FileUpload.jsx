@@ -150,34 +150,33 @@ export default function FileUpload({ sessionId, files, onFilesChanged }) {
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div>
-          <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-aha-navy">
-            Insumos que ayudan mucho (si los tienes)
-          </h4>
-          <ul className="space-y-1.5 text-xs text-slate-600">
-            {CHECKLIST.map((item) => (
-              <li key={item} className="flex gap-2">
-                <span className="text-aha-lime">●</span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-aha-navy">Archivos cargados</h4>
-          {files.length === 0 && pending.length === 0 && (
-            <p className="text-xs text-slate-400">Todavía no has cargado ningún archivo.</p>
-          )}
-          <ul className="space-y-2">
-            {pending.map((p) => (
-              <FileCard key={p.tempId} file={{ id: p.tempId, filename: p.filename, extractedSummary: "Analizando..." }} onRemove={() => {}} />
-            ))}
-            {files.map((f) => (
-              <FileCard key={f.id} file={f} onRemove={handleRemove} />
-            ))}
-          </ul>
-        </div>
+      <details className="mt-5 rounded-xl bg-white p-3">
+        <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-aha-navy">
+          Insumos que ayudan mucho (si los tienes)
+        </summary>
+        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-600">
+          {CHECKLIST.map((item) => (
+            <li key={item} className="flex items-center gap-1.5">
+              <span className="text-aha-lime">●</span>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <div className="mt-5">
+        <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-aha-navy">Archivos cargados</h4>
+        {files.length === 0 && pending.length === 0 && (
+          <p className="text-xs text-slate-400">Todavía no has cargado ningún archivo.</p>
+        )}
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {pending.map((p) => (
+            <FileCard key={p.tempId} file={{ id: p.tempId, filename: p.filename, extractedSummary: "Analizando..." }} onRemove={() => {}} />
+          ))}
+          {files.map((f) => (
+            <FileCard key={f.id} file={f} onRemove={handleRemove} />
+          ))}
+        </ul>
       </div>
     </div>
   );
