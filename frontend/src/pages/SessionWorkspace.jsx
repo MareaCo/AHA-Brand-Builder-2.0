@@ -22,6 +22,7 @@ export default function SessionWorkspace() {
   const [advancing, setAdvancing] = useState(false);
   const [showClosing, setShowClosing] = useState(false);
   const [error, setError] = useState(null);
+  const [coherenceWarning, setCoherenceWarning] = useState(null);
 
   const refresh = useCallback(async () => {
     const data = await api.getSession(id);
@@ -79,11 +80,15 @@ export default function SessionWorkspace() {
   async function advance() {
     setAdvancing(true);
     setError(null);
+    setCoherenceWarning(null);
     try {
       const updated = await api.advanceSession(id);
       setSession(updated);
       if (viewStage === session.currentStage) {
         setViewStage(updated.currentStage);
+      }
+      if (updated.coherence?.coherente === false && updated.coherence.alertas?.length > 0) {
+        setCoherenceWarning(updated.coherence.alertas);
       }
     } catch (err) {
       setError(err.message);
@@ -120,6 +125,24 @@ export default function SessionWorkspace() {
       </div>
 
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+
+      {coherenceWarning && (
+        <div className="mb-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="font-semibold">
+              ⚠ El chequeo de coherencia automático encontró posibles contradicciones con etapas anteriores:
+            </span>
+            <button type="button" className="text-amber-600 hover:underline" onClick={() => setCoherenceWarning(null)}>
+              descartar
+            </button>
+          </div>
+          <ul className="list-disc pl-4">
+            {coherenceWarning.map((a, i) => (
+              <li key={i}>{a}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {stageDef.key === "insumos" && (
         <div>

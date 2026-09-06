@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../db.js";
 import { STAGES, TOTAL_STAGES, getStage } from "../lib/stageDefinitions.js";
 import { stageIsComplete } from "../lib/summary.js";
+import { runCoherenceCheck } from "../lib/coherenceCheck.js";
 
 export const router = Router();
 
@@ -90,7 +91,19 @@ router.post("/:id/advance", async (req, res) => {
     where: { id: session.id },
     data: { currentStage: nextStage, status },
   });
-  res.json(await serializeSession(updated));
+
+  // Chequeo de coherencia automático contra todo lo validado hasta ahora — nunca bloquea
+  // el avance (la etapa ya quedó marcada como completa arriba), solo advierte. Si la
+  // llamada falla, coherente queda en null (no se asume que está bien).
+  let coherence = null;
+  const stageDataRows = await prisma.stageData.findMany({ where: { sessionId: session.id } });
+  try {
+    coherence = await runCoherenceCheck(stageDataRows);
+  } catch (err) {
+    coherence = { coherente: null, alertas: [], error: err.message };
+  }
+
+  res.json({ ...(await serializeSession(updated)), coherence });
 });
 
 // Reabrir una etapa anterior para editarla (retroceder libremente).

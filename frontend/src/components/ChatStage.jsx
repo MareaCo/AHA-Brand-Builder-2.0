@@ -20,6 +20,49 @@ function isHidden(message) {
   }
 }
 
+function getCitations(message) {
+  try {
+    const citations = JSON.parse(message.meta || "{}").citations;
+    return Array.isArray(citations) ? citations.filter((c) => c.results?.length > 0) : [];
+  } catch {
+    return [];
+  }
+}
+
+function SourcesNote({ citations }) {
+  const [open, setOpen] = useState(false);
+  if (citations.length === 0) return null;
+  return (
+    <div className="mt-1 max-w-[80%] text-[10px] text-slate-400">
+      <button type="button" className="hover:text-aha-periwinkle hover:underline" onClick={() => setOpen((o) => !o)}>
+        🔍 {open ? "ocultar fuentes consultadas" : "ver fuentes consultadas"}
+      </button>
+      {open && (
+        <ul className="mt-1 space-y-1 rounded-lg bg-slate-50 p-2">
+          {citations.map((c, i) => (
+            <li key={i}>
+              {c.query && <span className="italic">"{c.query}"</span>}
+              <ul className="ml-3 list-disc">
+                {c.results.map((r, j) => (
+                  <li key={j}>
+                    {r.url ? (
+                      <a href={r.url} target="_blank" rel="noreferrer" className="text-aha-periwinkle hover:underline">
+                        {r.title}
+                      </a>
+                    ) : (
+                      r.title
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function ChatStage({
   session,
   stageNumber,
@@ -163,7 +206,7 @@ export default function ChatStage({
           </p>
         )}
         {visibleMessages.map((m) => (
-          <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+          <div key={m.id} className={m.role === "user" ? "flex flex-col items-end" : "flex flex-col items-start"}>
             <div
               className={[
                 "max-w-[80%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-line",
@@ -172,6 +215,7 @@ export default function ChatStage({
             >
               {m.content}
             </div>
+            {m.role === "assistant" && <SourcesNote citations={getCitations(m)} />}
           </div>
         ))}
 

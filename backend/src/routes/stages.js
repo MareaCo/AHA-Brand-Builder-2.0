@@ -79,7 +79,7 @@ async function runTurnAndPersist({ sessionId, stageNumber, stage, userContent, h
       stageNumber,
       role: "assistant",
       content: result.text || "(sin respuesta de texto)",
-      meta: JSON.stringify({ proposals: result.proposals }),
+      meta: JSON.stringify({ proposals: result.proposals, citations: result.citations }),
     },
   });
 
@@ -89,6 +89,7 @@ async function runTurnAndPersist({ sessionId, stageNumber, stage, userContent, h
   return {
     message: assistantMessage,
     proposals: result.proposals,
+    citations: result.citations,
     stageContent: parseContent(updatedRow),
     stageComplete: complete,
   };

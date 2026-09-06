@@ -11,6 +11,31 @@ const LOCKED_STATUSES = new Set(["validado_por_usuario", "editado_por_usuario"])
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 
+// Extrae, de forma defensiva, las búsquedas web que el modelo haya hecho en un turno
+// (query + resultados con título/url) para poder mostrárselas al usuario — la API no
+// documenta un shape 100% estable para esto, así que cualquier campo inesperado se
+// ignora en vez de romper el turno.
+function extractCitations(content) {
+  const citations = [];
+  const queryById = {};
+  for (const block of content) {
+    if (block.type === "server_tool_use" && block.name === "web_search" && block.input?.query) {
+      queryById[block.id] = block.input.query;
+    }
+  }
+  for (const block of content) {
+    if (block.type !== "web_search_tool_result") continue;
+    const query = queryById[block.tool_use_id] || null;
+    const items = Array.isArray(block.content) ? block.content : [];
+    const results = items
+      .filter((r) => r && (r.url || r.title))
+      .map((r) => ({ title: r.title || r.url, url: r.url || null }))
+      .slice(0, 5);
+    if (query || results.length > 0) citations.push({ query, results });
+  }
+  return citations;
+}
+
 let client = null;
 function getClient() {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -49,6 +74,7 @@ export async function runStageTurn({
 
   const proposals = [];
   const metaUpdates = [];
+  const citations = [];
   let finalText = "";
   let stopReason = null;
 
@@ -68,6 +94,7 @@ export async function runStageTurn({
     stopReason = response.stop_reason;
     const textParts = response.content.filter((b) => b.type === "text").map((b) => b.text);
     if (textParts.length > 0) finalText += (finalText ? "\n\n" : "") + textParts.join("\n\n");
+    citations.push(...extractCitations(response.content));
 
     const toolUses = response.content.filter((b) => b.type === "tool_use");
 
@@ -121,7 +148,7 @@ export async function runStageTurn({
     }
   }
 
-  return { text: finalText.trim(), proposals, metaUpdates, stopReason };
+  return { text: finalText.trim(), proposals, metaUpdates, citations, stopReason };
 }
 
 // Usado para generar una propuesta directa fuera del flujo de chat (por ejemplo,
@@ -141,7 +168,7 @@ export async function generateText({ system, prompt, maxTokens = 2000 }) {
     .trim();
 }
 
-export async function generateTextWithDocument({ system, prompt, base64, mediaType, isImage }) {
+export async function generateTextWithDocument({ system, prompt, base64, mediaType, isImage, maxTokens = 1500 }) {
   const anthropic = getClient();
   const contentBlock = isImage
     ? { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } }
@@ -149,7 +176,7 @@ export async function generateTextWithDocument({ system, prompt, base64, mediaTy
 
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1500,
+    max_tokens: maxTokens,
     system,
     messages: [
       {

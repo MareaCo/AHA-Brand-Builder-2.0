@@ -79,19 +79,23 @@ export default function PyramidStagePage({ session, stageDef, onFieldsChanged })
         {coherence && (
           <div
             className={`mb-3 rounded-xl p-3 text-xs ${
-              coherence.coherente ? "bg-aha-lime/20 text-aha-navy" : "bg-amber-50 text-amber-800"
+              coherence.coherente === true
+                ? "bg-aha-lime/20 text-aha-navy"
+                : coherence.coherente === false
+                ? "bg-amber-50 text-amber-800"
+                : "bg-slate-100 text-slate-500"
             }`}
           >
-            {coherence.coherente ? (
-              <p>✓ Todo se ve coherente entre sí.</p>
-            ) : (
+            {coherence.coherente === true && <p>✓ Todo se ve coherente entre sí.</p>}
+            {coherence.coherente === false && (
               <ul className="list-disc pl-4">
                 {coherence.alertas.map((a, i) => (
                   <li key={i}>{a}</li>
                 ))}
               </ul>
             )}
-            {coherence.error && <p>{coherence.error}</p>}
+            {coherence.coherente === null && <p>⚠ No se pudo verificar la coherencia — no asumas que está bien.</p>}
+            {coherence.error && <p className="mt-1 italic">{coherence.error}</p>}
           </div>
         )}
 
