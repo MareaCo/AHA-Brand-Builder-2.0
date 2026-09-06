@@ -4,7 +4,15 @@ import { api } from "../api.js";
 import PyramidCanvas from "../components/PyramidCanvas.jsx";
 import ChatStage from "../components/ChatStage.jsx";
 
-const NEW_FIELD_KEYS = ["entorno_competitivo", "asociaciones_marca", "personalidad", "esencia", "arquetipo_dominante"];
+const NEW_FIELD_KEYS = [
+  "entorno_competitivo",
+  "asociaciones_marca",
+  "personalidad",
+  "esencia",
+  "arquetipo_dominante",
+  "arquetipo_secundario",
+  "territorio_comunicacion",
+];
 
 export default function PyramidStagePage({ session, stageDef, onFieldsChanged }) {
   const [pyramid, setPyramid] = useState(null);
@@ -13,8 +21,10 @@ export default function PyramidStagePage({ session, stageDef, onFieldsChanged })
   const [synthesizing, setSynthesizing] = useState(false);
   const canvasRef = useRef(null);
 
-  function refresh() {
-    api.getPyramid(session.id).then(setPyramid);
+  async function refresh() {
+    const data = await api.getPyramid(session.id);
+    setPyramid(data);
+    return data;
   }
 
   useEffect(refresh, [session.id]);
@@ -127,9 +137,9 @@ export default function PyramidStagePage({ session, stageDef, onFieldsChanged })
           stageNumber={7}
           stageDef={stageDef}
           compact
-          onFieldsChanged={() => {
-            refresh();
-            onFieldsChanged?.();
+          onFieldsChanged={async () => {
+            const data = await refresh();
+            onFieldsChanged?.(data.ready);
           }}
         />
       </div>

@@ -70,7 +70,19 @@ Reglas innegociables:
     record_proposal para dejar constancia estructurada, tu respuesta en texto siempre
     debe leerse como la voz de un consultor conversando — con calidez, reconociendo lo
     que la persona ya construyó, explicando el porqué de cada propuesta. Nunca reduzcas
-    tu rol a "registrar campos".`;
+    tu rol a "registrar campos".
+12. CRÍTICO — jamás generes contenido de una etapa distinta a la etapa actual indicada
+    abajo, sin importar qué tan lista se sienta la conversación o qué te pida la
+    persona. El avance de etapa lo controla el sistema (el botón "Continuar" en la
+    interfaz), nunca tú — tú no tienes forma de registrar campos de otra etapa desde
+    aquí (la herramienta record_proposal solo acepta las claves de la etapa actual), así
+    que si narras contenido de otra etapa igual no queda guardado en ningún lado, solo
+    confunde. Si la persona te pide "sigamos", "dale, continúa", o pregunta por la
+    Pirámide/Propuesta de Valor/Manifiesto estando en otra etapa: NO narres ese
+    contenido. En vez de eso, revisa el checklist de campos de esta etapa (más abajo) y
+    dile con calidez y precisión cuáles faltan por validar o editar para poder avanzar —
+    y ayúdala a cerrarlos. Solo cuando el sistema te indique (en el contexto de la
+    sesión) que estás en esa otra etapa, trabajas ese contenido — nunca antes.`;
 
 function buildFieldChecklist(stage, currentFields) {
   if (!stage || stage.fields.length === 0) return "";
@@ -127,6 +139,34 @@ export function buildContextBlocks(stageDataRows, files) {
 // campos como "verdad_candidata" que nunca coincidían con el schema esperado).
 export function buildRecordProposalTool(stage) {
   const keys = stage.fields.map((f) => f.key);
+  const listFields = stage.fields.filter((f) => f.type === "list").map((f) => f.key);
+
+  const valueSchema =
+    listFields.length > 0
+      ? {
+          description: `El contenido propuesto. Para los campos ${listFields.join(
+            ", "
+          )}, DEBE ser un array real de objetos {"atributo": "...", "materializacion": "..."} — uno por elemento (nunca un solo string con todo el contenido junto, ni un objeto suelto). Para los demás campos, es un string simple con el contenido propuesto.`,
+          anyOf: [
+            { type: "string" },
+            {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  atributo: { type: "string" },
+                  materializacion: { type: "string" },
+                },
+                required: ["atributo", "materializacion"],
+              },
+            },
+          ],
+        }
+      : {
+          description:
+            "El contenido propuesto. Puede ser un string, o un objeto si el campo lo requiere.",
+        };
+
   return {
     name: "record_proposal",
     description:
@@ -143,10 +183,7 @@ export function buildRecordProposalTool(stage) {
           type: "string",
           description: "Etiqueta legible del campo, por ejemplo 'Qué es tu marca' o 'Insight consolidado'.",
         },
-        value: {
-          description:
-            "El contenido propuesto. Puede ser un string, o un objeto/array si el campo lo requiere (por ejemplo los pilares de la propuesta de valor).",
-        },
+        value: valueSchema,
         rationale: {
           type: "string",
           description: "Justificación breve de por qué propones esto, especialmente importante para arquetipo y esencia en la Etapa 7.",

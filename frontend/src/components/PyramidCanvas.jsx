@@ -146,7 +146,7 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
 
           <Band level={2} tone="periwinkle" dividers>
             {[
-              <Cell key="rtb" label="Razones para creer" value={v("razones_para_creer", "medio")} dark editable={false} />,
+              <Cell key="rtb" label="Atributos diferenciales" value={v("razones_para_creer", "medio")} dark editable={false} />,
               <Cell
                 key="personalidad"
                 label="Personalidad"
@@ -204,8 +204,14 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
             <p className="text-[9px] font-bold uppercase tracking-wide text-aha-navy/60">Arquetipo secundario</p>
             <p className="mt-0.5 text-xs font-semibold text-aha-navy">{data.aparte.arquetipo_secundario || "—"}</p>
           </div>
-          <div className="rounded-xl bg-aha-pale p-3 text-center">
-            <p className="text-[9px] font-bold uppercase tracking-wide text-aha-navy/60">Territorio de marca</p>
+          <div
+            className="cursor-pointer rounded-xl bg-aha-pale p-3 text-center hover:bg-aha-pale/70"
+            onClick={() => {
+              const v3 = prompt("Territorio de comunicación:", data.aparte.territorio_marca || "");
+              if (v3 != null) onEditField("territorio_comunicacion", v3, "Territorio de comunicación");
+            }}
+          >
+            <p className="text-[9px] font-bold uppercase tracking-wide text-aha-navy/60">Territorio de comunicación</p>
             <p className="mt-0.5 text-xs font-medium text-aha-navy">{data.aparte.territorio_marca || "—"}</p>
           </div>
         </div>

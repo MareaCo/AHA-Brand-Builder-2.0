@@ -38,7 +38,7 @@ export function buildPyramidData(stageDataRows) {
     aparte: {
       arquetipo_dominante: f7.arquetipo_dominante?.value ?? null,
       arquetipo_secundario: f7.arquetipo_secundario?.value ?? null,
-      territorio_marca: fieldValue(byNumber, 1, "que_es"),
+      territorio_marca: f7.territorio_comunicacion?.value ?? null,
     },
     meta: {
       concepto: fieldValue(byNumber, 3, "concepto_completo"),

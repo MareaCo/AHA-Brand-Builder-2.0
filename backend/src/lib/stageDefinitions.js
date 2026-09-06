@@ -247,9 +247,17 @@ tener, entre 3 y 4 máximo (nunca más). Para cada pilar, ANTES de proponerlo:
 Cuéntale a la persona qué encontraste en la búsqueda, brevemente, antes de mostrar la
 propuesta — así puede ver de dónde sale la afirmación de que algo es diferencial.
 
-Usa record_proposal con field_key "pilares" y un value que sea un array de objetos
-{ atributo, materializacion } — puedes ir llamándolo de nuevo para ir agregando o
-ajustando pilares conforme avanza la conversación.`,
+Usa record_proposal con field_key "pilares" y un value que SIEMPRE sea un array real de
+objetos { atributo, materializacion } — un objeto por pilar, NUNCA un string con todo el
+contenido junto. Cada llamada a record_proposal para "pilares" REEMPLAZA por completo lo
+que había antes (no lo suma) — así que cada vez que lo llames, envía el array COMPLETO
+con TODOS los pilares construidos hasta ese momento (los de antes + el nuevo), nunca solo
+el pilar más reciente, o perderás los anteriores.
+
+Cuando termines de construir todos los pilares (3 o 4), muéstraselos también en tu texto
+de forma clara, uno por uno, para que la persona los pueda validar o ajustar antes de
+seguir. No avances a la Etapa 7 tú mismo — solo el botón "Continuar" de la interfaz
+avanza de etapa; tu trabajo termina en dejar los pilares completos y validados.`,
   },
   {
     number: 7,
@@ -264,29 +272,30 @@ ajustando pilares conforme avanza la conversación.`,
       { key: "esencia", label: "Esencia de marca", origin: "propuesta" },
       { key: "arquetipo_dominante", label: "Arquetipo dominante", origin: "propuesta" },
       { key: "arquetipo_secundario", label: "Arquetipo secundario", origin: "propuesta" },
-    ],
-    inheritedFields: [
-      { from: 5, key: "perfil_target", as: "target" },
-      { from: 2, key: "insight_consolidado", as: "insight" },
-      { from: 3, key: "rtb", as: "rtb" },
-      { from: 3, key: "beneficios", as: "beneficios" },
-      { from: 4, key: "por_que", as: "proposito" },
-      { from: 1, key: "que_es", as: "territorio_marca" },
+      { key: "territorio_comunicacion", label: "Territorio de comunicación", origin: "propuesta" },
     ],
     webSearchAllowed: true,
     systemInstructions: `
-Estás en la Etapa 7 — Pirámide de Marca. Este es un entregable GRÁFICO, nunca lo
-redactes como texto corrido.
+Estás en la Etapa 7 — Pirámide de Marca. Antes de preguntar nada, explica con calidez qué
+es la Pirámide de Marca y por qué es tan importante: es el resumen visual — un one-pager
+gráfico — de TODA la estrategia construida hasta ahora, pensado para que el equipo de
+mercadeo lo use como referencia rápida. Cada bloque de la pirámide ya tiene un dueño (una
+etapa anterior que lo construyó), salvo un puñado de piezas nuevas que se arman aquí por
+primera vez, viendo el conjunto completo. Este es un entregable GRÁFICO — nunca lo
+redactes como texto corrido ni como una lista larga de bullets en el chat.
 
-La pirámide tiene esta estructura (de abajo hacia arriba):
-- Base: Entorno competitivo | Target | Asociaciones de marca | Insight
-- Medio: Razones para creer | Personalidad | Beneficios racionales | Beneficios emocionales
-- Alto: Propósito
-- Cúspide: Esencia
-- Aparte: Arquetipo (dominante + secundario) | Territorio de marca
+La pirámide se construye de abajo hacia arriba, en este orden exacto:
+1. Base: Entorno competitivo | Target | Asociaciones de marca
+2. Insight
+3. Atributos diferenciales (razones para creer) | Personalidad
+4. Beneficios racionales | Beneficios emocionales
+5. Propósito de marca
+6. Esencia de marca (la cúspide)
+Aparte, fuera de la pirámide en sí: Arquetipo (dominante + secundario), y — al final,
+solo después de ver la marca completa — el Territorio de comunicación.
 
-Target, Insight, RTB, Beneficios y Propósito YA EXISTEN de etapas anteriores — tráelos
-con el script de callback, NUNCA vuelvas a preguntarlos.
+Target, Insight, Atributos diferenciales (RTB), Beneficios y Propósito YA EXISTEN de
+etapas anteriores — tráelos con el script de callback, NUNCA vuelvas a preguntarlos.
 
 Entorno competitivo, Asociaciones de marca y Personalidad SÍ son preguntas nuevas de esta
 etapa. Para el Entorno competitivo específicamente, usa la búsqueda web (no es opcional)
@@ -295,13 +304,22 @@ competitivo inventado o genérico le resta credibilidad a toda la pirámide. Cu�
 persona qué encontraste antes de mostrar la propuesta. Para Asociaciones de marca y
 Personalidad, si hay insumos disponibles, propón primero apoyándote en ellos.
 
-Esencia, Arquetipo (dominante + secundario) y Territorio de marca se PROPONEN, nunca se
-preguntan: la persona normalmente no conoce la teoría de los 12 arquetipos de Jung
-(Inocente, Explorador, Sabio, Héroe, Forajido, Mago, Hombre Común, Amante, Bufón,
-Cuidador, Creador, Gobernante). Tú debes proponer el arquetipo dominante y uno secundario,
-con su justificación basada en todo lo construido hasta ahora, y la persona valida o
-ajusta. Lo mismo para la esencia: una palabra o frase muy corta que capture el alma de la
-marca.
+Esencia, Arquetipo (dominante + secundario) y Territorio de comunicación se PROPONEN,
+nunca se preguntan — en ese orden, y el Territorio va AL FINAL, después de tener toda la
+pirámide completa (incluido el arquetipo), porque es la síntesis última de todo:
+- Esencia: una palabra o frase muy corta que capture el alma de la marca (field_key
+  "esencia").
+- Arquetipo: la persona normalmente no conoce la teoría de los 12 arquetipos de Jung
+  (Inocente, Explorador, Sabio, Héroe, Forajido, Mago, Hombre Común, Amante, Bufón,
+  Cuidador, Creador, Gobernante). Propón el dominante y uno secundario, con su
+  justificación basada en todo lo construido (field_keys "arquetipo_dominante" y
+  "arquetipo_secundario").
+- Territorio de comunicación: con TODO lo anterior ya sobre la mesa, propón en una sola
+  palabra o una frase muy corta el territorio de comunicación de la marca — el terreno
+  temático/emocional desde el que la marca puede hablarle a su audiencia de forma
+  distintiva (field_key "territorio_comunicacion"). No es lo mismo que el "qué es / qué
+  no es" de la Etapa 1 — es una síntesis nueva, más corta y más evocadora, vista con todo
+  el contexto de la pirámide completa.
 
 Usa record_proposal para cada campo nuevo. Cuando todos los campos estén completos,
 indica que la pirámide está lista para revisarse en la vista gráfica.`,

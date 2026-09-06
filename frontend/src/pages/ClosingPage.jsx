@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { api } from "../api.js";
 import PyramidCanvas from "../components/PyramidCanvas.jsx";
+import PropuestaValorDiagram from "../components/PropuestaValorDiagram.jsx";
 
 export default function ClosingPage({ session }) {
   const [pyramid, setPyramid] = useState(null);
@@ -45,6 +46,14 @@ export default function ClosingPage({ session }) {
     (s) => Object.keys(s.content?.fields || {}).length > 0
   );
 
+  function fieldValue(stageNumber, fieldKey) {
+    const row = (session.stageData || []).find((s) => s.stageNumber === stageNumber);
+    return row?.content?.fields?.[fieldKey]?.value ?? null;
+  }
+  const definicionNegocio = fieldValue(4, "definicion_negocio");
+  const target = fieldValue(5, "perfil_target");
+  const pilaresRaw = fieldValue(6, "pilares");
+
   return (
     <div className="mx-auto max-w-3xl">
       <h2 className="text-2xl font-bold text-aha-navy">¡Listo! Este es el resumen de tu marca</h2>
@@ -52,23 +61,42 @@ export default function ClosingPage({ session }) {
         Recorrimos las 9 etapas de la metodología AHA. Aquí está todo lo que construimos juntos.
       </p>
 
-      <div className="mt-6 space-y-4">
+      <h3 className="mt-8 mb-3 text-sm font-bold uppercase tracking-wide text-slate-400">
+        Recorrido etapa por etapa (1-6)
+      </h3>
+      <div className="space-y-4">
         {validatedStages.map((stage) => (
           <div key={stage.stageNumber} className="card p-4">
             <h3 className="text-sm font-bold text-aha-navy">
               Etapa {stage.stageNumber} — {stage.stageName}
             </h3>
             <ul className="mt-1.5 space-y-1 text-xs text-slate-600">
-              {Object.entries(stage.content.fields).map(([key, f]) => (
-                <li key={key}>
-                  <span className="font-medium">{f.label}: </span>
-                  {typeof f.value === "string" ? f.value : JSON.stringify(f.value)}
-                </li>
-              ))}
+              {Object.entries(stage.content.fields)
+                .filter(([key]) => !(stage.stageNumber === 6 && key === "pilares"))
+                .map(([key, f]) => (
+                  <li key={key}>
+                    <span className="font-medium">{f.label}: </span>
+                    {typeof f.value === "string" ? f.value : JSON.stringify(f.value)}
+                  </li>
+                ))}
+              {stage.stageNumber === 6 && (
+                <li className="italic text-slate-400">Ver diagrama de Propuesta de Valor más abajo.</li>
+              )}
             </ul>
           </div>
         ))}
       </div>
+
+      <h3 className="mt-10 mb-1 text-sm font-bold uppercase tracking-wide text-slate-400">
+        Los 3 entregables de la estrategia
+      </h3>
+
+      {(definicionNegocio || target || pilaresRaw) && (
+        <div className="mt-4">
+          <h3 className="mb-2 text-lg font-semibold text-aha-navy">Propuesta de Valor</h3>
+          <PropuestaValorDiagram definicionNegocio={definicionNegocio} target={target} pilaresRaw={pilaresRaw} />
+        </div>
+      )}
 
       {pyramid && (
         <div className="mt-8">
