@@ -12,9 +12,46 @@ function fieldValue(stageData, stageNumber, fieldKey) {
   return row?.content?.fields?.[fieldKey]?.value ?? null;
 }
 
-function truncate(text, max = 70) {
+// Convierte cualquier valor a un texto seguro para renderizar — nunca deja pasar un
+// objeto/array crudo a JSX (eso hace que React reviente toda la página sin aviso).
+function asText(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+
+function truncate(value, max = 70) {
+  const text = asText(value);
   if (!text) return "—";
   return text.length > max ? `${text.slice(0, max - 1).trim()}…` : text;
+}
+
+// El modelo controla libremente la forma de "pilares" (no hay schema estricto del lado
+// de la API) — puede llegar como array de objetos, un objeto suelto, strings, o con
+// entradas nulas/mal formadas si se editó a mano. Esto normaliza CUALQUIER forma a algo
+// seguro de renderizar, para que un dato inesperado nunca vuelva a dejar la página en blanco.
+function normalizePilares(raw) {
+  let list;
+  if (Array.isArray(raw)) list = raw;
+  else if (raw && typeof raw === "object") list = [raw];
+  else if (typeof raw === "string" && raw.trim()) list = [raw];
+  else return [];
+
+  return list
+    .filter((item) => item != null)
+    .slice(0, 4)
+    .map((item) => {
+      if (typeof item === "string") return { atributo: item, materializacion: "" };
+      if (typeof item !== "object") return { atributo: asText(item), materializacion: "" };
+      const atributo = item.atributo ?? item.nombre ?? item.titulo ?? "";
+      const materializacion = item.materializacion ?? item.descripcion ?? item.como_se_materializa ?? "";
+      return { atributo: asText(atributo), materializacion: asText(materializacion) };
+    });
 }
 
 export default function PropuestaValorStagePage({ session, stageDef, onFieldsChanged }) {
@@ -22,11 +59,7 @@ export default function PropuestaValorStagePage({ session, stageDef, onFieldsCha
   const definicionNegocio = fieldValue(stageData, 4, "definicion_negocio");
   const target = fieldValue(stageData, 5, "perfil_target");
   const pilaresRaw = fieldValue(stageData, 6, "pilares");
-  const pilares = Array.isArray(pilaresRaw)
-    ? pilaresRaw.slice(0, 4)
-    : typeof pilaresRaw === "string" && pilaresRaw.trim()
-    ? [{ atributo: pilaresRaw, materializacion: "" }]
-    : [];
+  const pilares = normalizePilares(pilaresRaw);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">

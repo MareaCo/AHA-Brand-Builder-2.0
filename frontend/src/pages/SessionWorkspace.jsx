@@ -9,6 +9,7 @@ import PyramidStagePage from "./PyramidStagePage.jsx";
 import PropuestaValorStagePage from "./PropuestaValorStagePage.jsx";
 import ManifestoStagePage from "./ManifestoStagePage.jsx";
 import ClosingPage from "./ClosingPage.jsx";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
 const SPECIAL_STAGE_KEYS = ["insumos", "piramide", "propuesta_valor", "manifiesto"];
 
@@ -144,53 +145,55 @@ export default function SessionWorkspace() {
         </div>
       )}
 
-      {stageDef.key === "insumos" && (
-        <div>
-          <FileUpload sessionId={id} files={files} onFilesChanged={setFiles} />
-          <div className="mt-6">
-            <ChatStage
-              session={session}
-              stageNumber={0}
-              stageDef={stageDef}
-              onFieldsChanged={() => syncAfterFieldsChanged(true)}
-              canAdvance={canAdvance}
-              advancing={advancing}
-              onAdvance={advance}
-              advanceLabel="Continuar a la Etapa 1 →"
-            />
+      <ErrorBoundary key={viewStage}>
+        {stageDef.key === "insumos" && (
+          <div>
+            <FileUpload sessionId={id} files={files} onFilesChanged={setFiles} />
+            <div className="mt-6">
+              <ChatStage
+                session={session}
+                stageNumber={0}
+                stageDef={stageDef}
+                onFieldsChanged={() => syncAfterFieldsChanged(true)}
+                canAdvance={canAdvance}
+                advancing={advancing}
+                onAdvance={advance}
+                advanceLabel="Continuar a la Etapa 1 →"
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {stageDef.key === "piramide" && (
-        <PyramidStagePage
-          session={session}
-          stageDef={stageDef}
-          onFieldsChanged={(ready) => syncAfterFieldsChanged(Boolean(ready))}
-        />
-      )}
+        {stageDef.key === "piramide" && (
+          <PyramidStagePage
+            session={session}
+            stageDef={stageDef}
+            onFieldsChanged={(ready) => syncAfterFieldsChanged(Boolean(ready))}
+          />
+        )}
 
-      {stageDef.key === "propuesta_valor" && (
-        <PropuestaValorStagePage
-          session={session}
-          stageDef={stageDef}
-          onFieldsChanged={(complete) => syncAfterFieldsChanged(complete)}
-        />
-      )}
+        {stageDef.key === "propuesta_valor" && (
+          <PropuestaValorStagePage
+            session={session}
+            stageDef={stageDef}
+            onFieldsChanged={(complete) => syncAfterFieldsChanged(complete)}
+          />
+        )}
 
-      {stageDef.key === "manifiesto" && <ManifestoStagePage session={session} />}
+        {stageDef.key === "manifiesto" && <ManifestoStagePage session={session} />}
 
-      {!SPECIAL_STAGE_KEYS.includes(stageDef.key) && (
-        <ChatStage
-          session={session}
-          stageNumber={viewStage}
-          stageDef={stageDef}
-          onFieldsChanged={(complete) => syncAfterFieldsChanged(complete)}
-          canAdvance={canAdvance}
-          advancing={advancing}
-          onAdvance={advance}
-        />
-      )}
+        {!SPECIAL_STAGE_KEYS.includes(stageDef.key) && (
+          <ChatStage
+            session={session}
+            stageNumber={viewStage}
+            stageDef={stageDef}
+            onFieldsChanged={(complete) => syncAfterFieldsChanged(complete)}
+            canAdvance={canAdvance}
+            advancing={advancing}
+            onAdvance={advance}
+          />
+        )}
+      </ErrorBoundary>
     </Shell>
   );
 }
