@@ -31,21 +31,34 @@ export async function getOrCreateStageData(sessionId, stageNumber) {
 
 // Red de seguridad: los campos tipo "list" (por ejemplo "pilares") deberían llegar
 // como array de objetos { atributo, materializacion } — el schema de la herramienta ya
-// lo pide así, pero un modelo puede igual mandar todo como un solo string (por ejemplo
-// "1. Pilar 1 — ... 2. Pilar 2 — ..."). En vez de guardar eso como un único elemento
-// gigante, se intenta partir por los marcadores numerados en varios elementos — no es
-// perfecto, pero es muchísimo mejor que perder los demás pilares.
+// lo pide así, pero un modelo (o un pegado manual del usuario) puede igual mandar todo
+// como un solo string, ya sea con marcadores numerados ("1. Pilar 1 — ...") o con el
+// formato que usa la IA al narrar los pilares en el chat ("**Pilar 1 — ...** *"...").
+// En vez de guardar eso como un único elemento gigante, se parte por esos marcadores en
+// varios elementos, separando además el atributo (antes de las comillas) de su
+// materialización (dentro de las comillas) cuando existen — no es perfecto, pero es
+// muchísimo mejor que perder los demás pilares.
 function normalizeListValue(value) {
   if (Array.isArray(value)) return value;
   if (typeof value !== "string" || !value.trim()) return value;
 
+  const splitPattern = /(?:\*\*\s*)?(?:pilar\s+)?\d+\s*[.\-—:]\s*(?:\*\*\s*)?/gi;
   const parts = value
-    .split(/(?:^|\s)\d+\.\s+/)
+    .split(splitPattern)
     .map((s) => s.trim())
     .filter(Boolean);
 
   if (parts.length <= 1) return [{ atributo: value.trim(), materializacion: "" }];
-  return parts.map((part) => ({ atributo: part, materializacion: "" }));
+
+  return parts.map((part) => {
+    const clean = part.replace(/\*\*/g, "").trim();
+    const quoteMatch = clean.match(/["“”]([^"“”]+)["“”]/);
+    if (quoteMatch) {
+      const atributo = clean.slice(0, quoteMatch.index).replace(/[*\s]+$/, "").trim();
+      return { atributo: atributo || clean, materializacion: quoteMatch[1].trim() };
+    }
+    return { atributo: clean, materializacion: "" };
+  });
 }
 
 const LOCKED_STATUSES = new Set(["validado_por_usuario", "editado_por_usuario"]);
@@ -152,15 +165,32 @@ export async function applyMetaUpdates(sessionId, stageNumber, metaUpdates) {
   });
 }
 
+// Usado por el flujo de respaldo "completar manualmente" (edición/validación de UN
+// campo entero, no elemento por elemento). Para un campo tipo "list", esto solo debería
+// alcanzarse si el valor guardado todavía no es un array (por ejemplo, quedó como string
+// por una edición anterior a este arreglo) — en ese caso se vuelve a partir en elementos
+// en vez de dejarlo guardado como un bloque de texto único, para no quedar atascado sin
+// forma de recuperar la vista por pilar.
 export async function setFieldStatus(sessionId, stageNumber, fieldKey, { value, label, status }) {
   const row = await getOrCreateStageData(sessionId, stageNumber);
   const content = parseContent(row);
   const existing = content.fields[fieldKey] || {};
+  const stage = getStage(stageNumber);
+  const fieldDef = stage?.fields?.find((f) => f.key === fieldKey);
+
+  let newValue = value !== undefined ? value : existing.value;
+  let newStatus = status;
+
+  if (fieldDef?.type === "list") {
+    const items = normalizeListValue(newValue).map((item) => ({ ...item, status }));
+    newValue = items;
+    newStatus = computeListAggregateStatus(items, fieldDef.minItems);
+  }
 
   content.fields[fieldKey] = {
     label: label || existing.label || fieldKey,
-    value: value !== undefined ? value : existing.value,
-    status,
+    value: newValue,
+    status: newStatus,
     rationale: existing.rationale || null,
   };
 
