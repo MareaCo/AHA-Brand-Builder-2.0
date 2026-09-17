@@ -27,7 +27,9 @@ export default function PyramidStagePage({ session, stageDef, onFieldsChanged })
     return data;
   }
 
-  useEffect(refresh, [session.id]);
+  useEffect(() => {
+    refresh();
+  }, [session.id]);
 
   async function handleEditField(fieldKey, value, label) {
     const res = await api.editPyramidField(session.id, fieldKey, value, label);
