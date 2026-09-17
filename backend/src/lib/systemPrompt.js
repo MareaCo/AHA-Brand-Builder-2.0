@@ -84,19 +84,36 @@ Reglas innegociables:
     y ayúdala a cerrarlos. Solo cuando el sistema te indique (en el contexto de la
     sesión) que estás en esa otra etapa, trabajas ese contenido — nunca antes.`;
 
+const STATUS_LABELS = {
+  validado_por_usuario: "✅ VALIDADO por el usuario — NO lo vuelvas a proponer salvo que pida cambiarlo",
+  editado_por_usuario: "✅ EDITADO/CERRADO por el usuario — NO lo vuelvas a proponer salvo que pida cambiarlo",
+  propuesto_por_ia: "⏳ propuesto, todavía esperando que el usuario valide/edite",
+};
+
 function buildFieldChecklist(stage, currentFields) {
   if (!stage || stage.fields.length === 0) return "";
   const lines = stage.fields.map((f) => {
     const entry = currentFields?.[f.key];
     if (!entry) return `- ${f.key} ("${f.label}"): todavía sin definir.`;
+
+    if (f.type === "list" && Array.isArray(entry.value)) {
+      // Un campo tipo "list" se construye elemento por elemento — cada uno puede tener
+      // su propio estado (el usuario puede validar el elemento 1 mientras el 2 y el 3
+      // siguen pendientes). Mostrarlos por separado evita que la IA piense que todo el
+      // campo está cerrado, o que un elemento validado se puede volver a tocar.
+      const itemLines = entry.value.map((item, i) => {
+        const label = STATUS_LABELS[item?.status] || item?.status || "⏳ pendiente";
+        const text = [item?.atributo, item?.materializacion].filter(Boolean).join(" — ");
+        return `    ${i + 1}. ${label}. Valor: "${text.slice(0, 140)}"`;
+      });
+      return `- ${f.key} ("${f.label}") — ${entry.value.length} elemento(s) construido(s) hasta ahora:\n${itemLines.join(
+        "\n"
+      )}`;
+    }
+
     const shortValue =
       typeof entry.value === "string" ? entry.value.slice(0, 140) : JSON.stringify(entry.value).slice(0, 140);
-    const statusLabel =
-      {
-        validado_por_usuario: "✅ VALIDADO por el usuario — NO lo vuelvas a proponer salvo que pida cambiarlo",
-        editado_por_usuario: "✅ EDITADO/CERRADO por el usuario — NO lo vuelvas a proponer salvo que pida cambiarlo",
-        propuesto_por_ia: "⏳ propuesto, todavía esperando que el usuario valide/edite",
-      }[entry.status] || entry.status;
+    const statusLabel = STATUS_LABELS[entry.status] || entry.status;
     return `- ${f.key} ("${f.label}"): ${statusLabel}. Valor actual: "${shortValue}"`;
   });
   return `\n\nEstado de los campos de esta etapa (claves válidas: ${stage.fields

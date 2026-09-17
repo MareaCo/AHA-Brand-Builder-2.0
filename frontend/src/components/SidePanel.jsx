@@ -6,7 +6,13 @@ function renderValue(value) {
   if (Array.isArray(value)) {
     return value
       .map((item) =>
-        typeof item === "string" ? item : Object.values(item).filter(Boolean).join(" — ")
+        typeof item === "string"
+          ? item
+          : Object.entries(item)
+              .filter(([k]) => k !== "status")
+              .map(([, v]) => v)
+              .filter(Boolean)
+              .join(" — ")
       )
       .join("; ");
   }

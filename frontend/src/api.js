@@ -67,6 +67,10 @@ export const api = {
     post(`/sessions/${sessionId}/stages/${stageNumber}/fields/${fieldKey}/validate`),
   editField: (sessionId, stageNumber, fieldKey, value, label) =>
     put(`/sessions/${sessionId}/stages/${stageNumber}/fields/${fieldKey}`, { value, label }),
+  validateListItem: (sessionId, stageNumber, fieldKey, itemIndex) =>
+    post(`/sessions/${sessionId}/stages/${stageNumber}/fields/${fieldKey}/items/${itemIndex}/validate`),
+  editListItem: (sessionId, stageNumber, fieldKey, itemIndex, value) =>
+    put(`/sessions/${sessionId}/stages/${stageNumber}/fields/${fieldKey}/items/${itemIndex}`, value),
 
   getPyramid: (sessionId) => get(`/sessions/${sessionId}/pyramid`),
   editPyramidField: (sessionId, fieldKey, value, label) =>

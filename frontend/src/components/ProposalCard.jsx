@@ -8,14 +8,128 @@ function renderValue(value) {
       .map((item, i) =>
         typeof item === "string"
           ? `${i + 1}. ${item}`
-          : `${i + 1}. ${Object.values(item).filter(Boolean).join(" — ")}`
+          : `${i + 1}. ${Object.entries(item)
+              .filter(([k]) => k !== "status")
+              .map(([, v]) => v)
+              .filter(Boolean)
+              .join(" — ")}`
       )
       .join("\n");
   }
   return JSON.stringify(value, null, 2);
 }
 
-export default function ProposalCard({ fieldKey, field, onValidate, onEdit }) {
+function renderItem(item) {
+  if (typeof item === "string") return item;
+  return [item?.atributo, item?.materializacion].filter(Boolean).join(" — ");
+}
+
+// Una tarjeta por elemento de un campo tipo "list" (por ejemplo, cada pilar dentro de
+// "pilares") — se valida/edita uno por uno, igual que en el resto de las etapas, sin
+// esperar a que estén todos construidos para poder cerrar el primero.
+function ListItemCard({ fieldKey, index, item, onValidateItem, onEditItem }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(renderItem(item));
+  const [busy, setBusy] = useState(false);
+  const isDone = item.status === "validado_por_usuario" || item.status === "editado_por_usuario";
+
+  async function run(fn) {
+    setBusy(true);
+    try {
+      await fn();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className={[
+        "rounded-lg border p-2.5 text-sm",
+        isDone ? "border-aha-lime bg-aha-lime/10" : "border-aha-periwinkle/30 bg-aha-periwinkle/5",
+      ].join(" ")}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-wide text-aha-navy/60">Pilar {index + 1}</span>
+        {isDone && <span className="text-[10px] font-semibold text-green-700">✓ validado</span>}
+      </div>
+
+      {!editing ? (
+        <>
+          <p className="mt-1 whitespace-pre-line text-slate-700">{renderItem(item)}</p>
+          {!isDone && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                className="btn-accent !px-3 !py-1 text-xs"
+                onClick={() => run(() => onValidateItem(fieldKey, index))}
+              >
+                Validar
+              </button>
+              <button
+                type="button"
+                className="btn-secondary !px-3 !py-1 text-xs"
+                onClick={() => {
+                  setDraft(renderItem(item));
+                  setEditing(true);
+                }}
+              >
+                Editar
+              </button>
+            </div>
+          )}
+          {isDone && (
+            <button
+              type="button"
+              className="btn-ghost mt-1.5 !px-2 !py-0.5 text-[11px]"
+              onClick={() => {
+                setDraft(renderItem(item));
+                setEditing(true);
+              }}
+            >
+              Ajustar de nuevo
+            </button>
+          )}
+        </>
+      ) : (
+        <div className="mt-2">
+          <textarea
+            className="w-full rounded-lg border border-slate-200 p-2 text-sm focus:border-aha-periwinkle focus:outline-none"
+            rows={3}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            autoFocus
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              disabled={busy || !draft.trim()}
+              className="btn-primary !px-3 !py-1 text-xs"
+              onClick={() =>
+                run(async () => {
+                  const [atributo, ...rest] = draft.split(" — ");
+                  await onEditItem(fieldKey, index, {
+                    atributo: atributo.trim(),
+                    materializacion: rest.join(" — ").trim(),
+                  });
+                  setEditing(false);
+                })
+              }
+            >
+              Guardar
+            </button>
+            <button type="button" className="btn-ghost !px-3 !py-1 text-xs" onClick={() => setEditing(false)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ProposalCard({ fieldKey, field, isList, onValidate, onEdit, onValidateItem, onEditItem }) {
   const [mode, setMode] = useState(null); // null | 'edit' | 'scratch'
   const [draft, setDraft] = useState(renderValue(field.value));
   const [busy, setBusy] = useState(false);
@@ -30,6 +144,34 @@ export default function ProposalCard({ fieldKey, field, onValidate, onEdit }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (isList && Array.isArray(field.value)) {
+    const validatedCount = field.value.filter(
+      (it) => it?.status === "validado_por_usuario" || it?.status === "editado_por_usuario"
+    ).length;
+    return (
+      <div className="rounded-xl border border-aha-periwinkle/30 bg-aha-periwinkle/5 p-3 text-sm">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wide text-aha-navy">{field.label}</span>
+          <span className="text-[10px] font-semibold text-slate-500">
+            {validatedCount} de {field.value.length} validado(s)
+          </span>
+        </div>
+        <div className="mt-2 space-y-2">
+          {field.value.map((item, i) => (
+            <ListItemCard
+              key={i}
+              fieldKey={fieldKey}
+              index={i}
+              item={item}
+              onValidateItem={onValidateItem}
+              onEditItem={onEditItem}
+            />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

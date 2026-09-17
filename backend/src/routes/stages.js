@@ -9,6 +9,7 @@ import {
   applyProposals,
   applyMetaUpdates,
   setFieldStatus,
+  setListItemStatus,
 } from "../lib/stageDataStore.js";
 
 export const router = Router();
@@ -183,6 +184,44 @@ router.put("/sessions/:sessionId/stages/:stageNumber/fields/:fieldKey", async (r
     status: "editado_por_usuario",
   });
   res.json(parseContent(updated));
+});
+
+// Validar UN elemento puntual de un campo tipo "list" (por ejemplo, un pilar
+// específico dentro de "pilares"), sin afectar los demás elementos del array.
+router.post(
+  "/sessions/:sessionId/stages/:stageNumber/fields/:fieldKey/items/:itemIndex/validate",
+  async (req, res) => {
+    const { sessionId, fieldKey } = req.params;
+    const stageNumber = Number(req.params.stageNumber);
+    const itemIndex = Number(req.params.itemIndex);
+    try {
+      const updated = await setListItemStatus(sessionId, stageNumber, fieldKey, itemIndex, {
+        status: "validado_por_usuario",
+      });
+      res.json(parseContent(updated));
+    } catch (err) {
+      res.status(404).json({ error: err.message });
+    }
+  }
+);
+
+// Editar UN elemento puntual de un campo tipo "list".
+router.put("/sessions/:sessionId/stages/:stageNumber/fields/:fieldKey/items/:itemIndex", async (req, res) => {
+  const { sessionId, fieldKey } = req.params;
+  const stageNumber = Number(req.params.stageNumber);
+  const itemIndex = Number(req.params.itemIndex);
+  const { atributo, materializacion } = req.body;
+  if (!atributo) return res.status(400).json({ error: "atributo es obligatorio." });
+
+  try {
+    const updated = await setListItemStatus(sessionId, stageNumber, fieldKey, itemIndex, {
+      value: { atributo, materializacion: materializacion || "" },
+      status: "editado_por_usuario",
+    });
+    res.json(parseContent(updated));
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
 });
 
 export { router as stagesRouter };

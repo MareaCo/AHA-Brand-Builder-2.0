@@ -162,6 +162,21 @@ export default function ChatStage({
     onFieldsChanged?.(stageComplete(updated.fields));
   }
 
+  // Un campo tipo "list" (por ejemplo "pilares") se valida/edita elemento por elemento
+  // — cada pilar tiene sus propios botones, igual que en el resto de las etapas, sin
+  // esperar a que estén los 3-4 completos para poder cerrar el primero.
+  async function handleValidateItem(fieldKey, itemIndex) {
+    const updated = await api.validateListItem(session.id, stageNumber, fieldKey, itemIndex);
+    setFields(updated.fields);
+    onFieldsChanged?.(stageComplete(updated.fields));
+  }
+
+  async function handleEditItem(fieldKey, itemIndex, value) {
+    const updated = await api.editListItem(session.id, stageNumber, fieldKey, itemIndex, value);
+    setFields(updated.fields);
+    onFieldsChanged?.(stageComplete(updated.fields));
+  }
+
   function stageComplete(currentFields) {
     if (!stageDef?.fields?.length) return true;
     return stageDef.fields.every((f) => {
@@ -222,7 +237,16 @@ export default function ChatStage({
         {loaded && !starting && proposedFieldEntries.length > 0 && (
           <div className="space-y-2 pt-2">
             {proposedFieldEntries.map(([key, field]) => (
-              <ProposalCard key={key} fieldKey={key} field={field} onValidate={handleValidate} onEdit={handleEdit} />
+              <ProposalCard
+                key={key}
+                fieldKey={key}
+                field={field}
+                isList={stageDef?.fields?.find((f) => f.key === key)?.type === "list"}
+                onValidate={handleValidate}
+                onEdit={handleEdit}
+                onValidateItem={handleValidateItem}
+                onEditItem={handleEditItem}
+              />
             ))}
           </div>
         )}

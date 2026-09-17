@@ -224,7 +224,7 @@ la categoría — no solo quién es en el papel.`,
     name: "Propuesta de Valor",
     kind: "chat",
     shortGoal: "Recuperar Definición del Negocio y Target, luego construir 3-4 pilares diferenciales.",
-    fields: [{ key: "pilares", label: "Pilares de la propuesta de valor", type: "list" }],
+    fields: [{ key: "pilares", label: "Pilares de la propuesta de valor", type: "list", minItems: 3 }],
     webSearchAllowed: true,
     systemInstructions: `
 Estás en la Etapa 6 — Propuesta de Valor.

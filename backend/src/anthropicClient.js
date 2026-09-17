@@ -109,8 +109,15 @@ export async function runStageTurn({
       if (toolUse.name === "record_proposal") {
         const { field_key, field_label, value, rationale } = toolUse.input;
         const existing = fieldsState[field_key];
+        // Los campos tipo "list" (por ejemplo "pilares") se construyen elemento por
+        // elemento a lo largo de varios turnos — el usuario puede validar el primer
+        // elemento mientras la IA sigue proponiendo los siguientes. Bloquear todo el
+        // campo en cuanto un elemento queda cerrado impediría terminar de construirlo,
+        // así que aquí siempre se deja pasar; la protección real (no perder ni
+        // sobreescribir un elemento ya validado) ocurre al fusionar en applyProposals.
+        const isListField = stage?.fields?.find((f) => f.key === field_key)?.type === "list";
 
-        if (existing && LOCKED_STATUSES.has(existing.status)) {
+        if (!isListField && existing && LOCKED_STATUSES.has(existing.status)) {
           const shownValue = typeof existing.value === "string" ? existing.value : JSON.stringify(existing.value);
           toolResults.push({
             type: "tool_result",
