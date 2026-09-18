@@ -116,7 +116,10 @@ function Cell({ label, value, editable, onSave, dark, maxChars = 90 }) {
         setEditing(true);
       }}
       className={[
-        "flex flex-1 flex-col items-center gap-0.5 overflow-hidden px-2 py-1.5 text-center",
+        // justify-end: el trapezoide se angosta hacia ARRIBA de cada banda, así que el
+        // contenido se ancla abajo (el borde más ancho) para alejarlo de la zona que el
+        // clip-path recorta.
+        "flex flex-1 flex-col items-center justify-end gap-0.5 overflow-hidden px-1 py-1.5 text-center",
         editable ? "cursor-pointer hover:opacity-80" : "",
       ].join(" ")}
       title={fullText && fullText.length > maxChars ? fullText : editable ? "Click para editar" : undefined}
@@ -124,7 +127,7 @@ function Cell({ label, value, editable, onSave, dark, maxChars = 90 }) {
       <span className={["text-[9px] font-bold uppercase tracking-wide", dark ? "text-white/70" : "text-aha-navy/60"].join(" ")}>
         {label}
       </span>
-      <span className={["text-[11px] font-medium leading-tight", dark ? "text-white" : "text-aha-navy"].join(" ")}>
+      <span className={["line-clamp-3 text-[11px] font-medium leading-tight", dark ? "text-white" : "text-aha-navy"].join(" ")}>
         {truncate(fullText, maxChars)}
       </span>
     </div>
@@ -132,10 +135,23 @@ function Cell({ label, value, editable, onSave, dark, maxChars = 90 }) {
 }
 
 function Band({ level, tone, dividers = true, children }) {
+  const { bottom } = LEVEL_INSETS[level];
+  // El contenido se ancla al borde inferior de la banda (ver justify-end en Cell), así
+  // que el punto más angosto que puede tocar es el inset "bottom" de esa banda — se le
+  // agrega un margen de seguridad extra para que nunca roce el borde inclinado del
+  // trapecio. El padding es en % del ancho de ESTA banda (no de cada celda), por eso va
+  // en el contenedor de fila y no en cada Cell.
+  const safePadding = `${bottom + 5}%`;
   return (
     <div
       className="flex w-full"
-      style={{ clipPath: clipPathFor(level), backgroundColor: TONE_BG[tone], minHeight: level === 5 ? 64 : 56 }}
+      style={{
+        clipPath: clipPathFor(level),
+        backgroundColor: TONE_BG[tone],
+        minHeight: level === 5 ? 64 : 56,
+        paddingLeft: safePadding,
+        paddingRight: safePadding,
+      }}
     >
       {children.map((child, i) => (
         <div
@@ -153,22 +169,33 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
   const editable = (key) => editableKeys?.includes(key);
   const v = (key, group) => (synthesized?.[group]?.[key] ?? data[group]?.[key]) ?? null;
 
+  const esenciaValue = v("esencia", "cuspide");
+
   return (
     <div ref={ref} className="rounded-3xl bg-white p-6">
+      {/* La cúspide (Esencia) se muestra como título arriba de la pirámide, no adentro del
+          triángulo — la punta es geométricamente demasiado angosta para contener texto
+          legible sin que el clip-path lo corte. */}
+      <button
+        type="button"
+        disabled={!editable("esencia")}
+        onClick={() => {
+          const val = prompt("Esencia de marca:", esenciaValue || "");
+          if (val != null) onEditField("esencia", val, "Esencia");
+        }}
+        className={[
+          "mx-auto mb-3 block text-center",
+          editable("esencia") ? "cursor-pointer hover:opacity-80" : "cursor-default",
+        ].join(" ")}
+      >
+        <p className="text-[10px] font-bold uppercase tracking-wide text-aha-navy/50">✦ Esencia de marca</p>
+        <p className="text-lg font-bold text-aha-navy">{esenciaValue || "—"}</p>
+      </button>
+
       <div className="mx-auto flex max-w-2xl gap-4">
         <div className="flex flex-1 flex-col gap-[2px]">
           <Band level={5} tone="navy" dividers={false}>
-            {[
-              <Cell
-                key="esencia"
-                label="Esencia"
-                value={v("esencia", "cuspide")}
-                dark
-                editable={editable("esencia")}
-                onSave={(val) => onEditField("esencia", val, "Esencia")}
-                maxChars={90}
-              />,
-            ]}
+            {[<div key="apex-spacer" className="flex-1" />]}
           </Band>
 
           <Band level={4} tone="periwinkle" dividers={false}>
@@ -179,7 +206,7 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 value={v("proposito", "alto")}
                 dark
                 editable={false}
-                maxChars={140}
+                maxChars={100}
               />,
             ]}
           </Band>
@@ -192,7 +219,7 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 value={v("beneficios_racionales", "medio")}
                 dark
                 editable={false}
-                maxChars={90}
+                maxChars={70}
               />,
               <Cell
                 key="be"
@@ -200,7 +227,7 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 value={v("beneficios_emocionales", "medio")}
                 dark
                 editable={false}
-                maxChars={90}
+                maxChars={70}
               />,
             ]}
           </Band>
@@ -229,7 +256,7 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
 
           <Band level={1} tone="lime" dividers={false}>
             {[
-              <Cell key="insight" label="Insight" value={v("insight", "base")} editable={false} maxChars={140} />,
+              <Cell key="insight" label="Insight" value={v("insight", "base")} editable={false} maxChars={110} />,
             ]}
           </Band>
 
