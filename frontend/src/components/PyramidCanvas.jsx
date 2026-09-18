@@ -73,37 +73,60 @@ const TONE_BG = {
   pale: "#e3f2b8",
 };
 
-function Cell({ label, value, editable, onSave, dark, maxChars = 90 }) {
-  const [editing, setEditing] = useState(false);
+function Cell({ label, value, editable, onSave, dark, maxChars = 90, sourceStage }) {
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const fullText = renderValue(value);
+  const isTruncated = fullText && fullText.length > maxChars;
 
-  if (editing) {
+  // Al abrirla: si es editable, es la caja de edición de siempre; si no, es una vista de
+  // solo lectura con el texto completo — así CUALQUIER bloque de la pirámide se puede
+  // leer entero (el objetivo de que funcione como un one-pager real), aunque solo los
+  // campos nuevos de esta etapa se puedan editar aquí mismo.
+  if (open) {
     return (
-      <div className="flex flex-1 flex-col gap-1 rounded-lg bg-white p-2 shadow-inner" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-1 flex-col gap-1 rounded-lg bg-white p-2 text-left shadow-inner" onClick={(e) => e.stopPropagation()}>
         <span className="text-[9px] font-bold uppercase text-slate-400">{label}</span>
-        <textarea
-          className="w-full rounded border border-slate-200 p-1 text-[11px] text-slate-800"
-          rows={3}
-          autoFocus
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-        />
-        <div className="flex gap-1">
-          <button
-            type="button"
-            className="btn-primary !px-2 !py-0.5 text-[10px]"
-            onClick={() => {
-              onSave(draft);
-              setEditing(false);
-            }}
-          >
-            Guardar
-          </button>
-          <button type="button" className="btn-ghost !px-2 !py-0.5 text-[10px]" onClick={() => setEditing(false)}>
-            Cancelar
-          </button>
-        </div>
+        {editable ? (
+          <>
+            <textarea
+              className="w-full rounded border border-slate-200 p-1 text-[11px] text-slate-800"
+              rows={4}
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            <div className="flex gap-1">
+              <button
+                type="button"
+                className="btn-primary !px-2 !py-0.5 text-[10px]"
+                onClick={() => {
+                  onSave(draft);
+                  setOpen(false);
+                }}
+              >
+                Guardar
+              </button>
+              <button type="button" className="btn-ghost !px-2 !py-0.5 text-[10px]" onClick={() => setOpen(false)}>
+                Cancelar
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="max-h-40 overflow-y-auto whitespace-pre-line text-[11px] leading-snug text-slate-800">
+              {fullText || "—"}
+            </p>
+            {sourceStage && (
+              <p className="text-[10px] italic text-slate-400">
+                Viene de la Etapa {sourceStage} — para cambiarlo, reábrela desde el panel "Lo que hemos construido".
+              </p>
+            )}
+            <button type="button" className="btn-ghost self-start !px-2 !py-0.5 text-[10px]" onClick={() => setOpen(false)}>
+              Cerrar
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -111,18 +134,16 @@ function Cell({ label, value, editable, onSave, dark, maxChars = 90 }) {
   return (
     <div
       onClick={() => {
-        if (!editable) return;
         setDraft(fullText);
-        setEditing(true);
+        setOpen(true);
       }}
       className={[
         // justify-end: el trapezoide se angosta hacia ARRIBA de cada banda, así que el
         // contenido se ancla abajo (el borde más ancho) para alejarlo de la zona que el
         // clip-path recorta.
-        "flex flex-1 flex-col items-center justify-end gap-0.5 overflow-hidden px-1 py-1.5 text-center",
-        editable ? "cursor-pointer hover:opacity-80" : "",
+        "flex flex-1 cursor-pointer flex-col items-center justify-end gap-0.5 overflow-hidden px-1 py-1.5 text-center hover:opacity-80",
       ].join(" ")}
-      title={fullText && fullText.length > maxChars ? fullText : editable ? "Click para editar" : undefined}
+      title={isTruncated ? "Click para ver completo" : editable ? "Click para editar" : undefined}
     >
       <span className={["text-[9px] font-bold uppercase tracking-wide", dark ? "text-white/70" : "text-aha-navy/60"].join(" ")}>
         {label}
@@ -207,6 +228,7 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 dark
                 editable={false}
                 maxChars={100}
+                sourceStage={4}
               />,
             ]}
           </Band>
@@ -220,6 +242,7 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 dark
                 editable={false}
                 maxChars={70}
+                sourceStage={3}
               />,
               <Cell
                 key="be"
@@ -228,6 +251,7 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 dark
                 editable={false}
                 maxChars={70}
+                sourceStage={3}
               />,
             ]}
           </Band>
@@ -241,6 +265,7 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 dark
                 editable={false}
                 maxChars={90}
+                sourceStage={3}
               />,
               <Cell
                 key="personalidad"
@@ -256,7 +281,14 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
 
           <Band level={1} tone="lime" dividers={false}>
             {[
-              <Cell key="insight" label="Insight" value={v("insight", "base")} editable={false} maxChars={110} />,
+              <Cell
+                key="insight"
+                label="Insight"
+                value={v("insight", "base")}
+                editable={false}
+                maxChars={110}
+                sourceStage={2}
+              />,
             ]}
           </Band>
 
@@ -270,7 +302,14 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 onSave={(val) => onEditField("entorno_competitivo", val, "Entorno competitivo")}
                 maxChars={70}
               />,
-              <Cell key="target" label="★ Target" value={v("target", "base")} editable={false} maxChars={70} />,
+              <Cell
+                key="target"
+                label="★ Target"
+                value={v("target", "base")}
+                editable={false}
+                maxChars={70}
+                sourceStage={5}
+              />,
               <Cell
                 key="asociaciones"
                 label="Asociaciones de marca"

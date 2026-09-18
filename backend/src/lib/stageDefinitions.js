@@ -298,11 +298,29 @@ Target, Insight, Atributos diferenciales (RTB), Beneficios y Propósito YA EXIST
 etapas anteriores — tráelos con el script de callback, NUNCA vuelvas a preguntarlos.
 
 Entorno competitivo, Asociaciones de marca y Personalidad SÍ son preguntas nuevas de esta
-etapa. Para el Entorno competitivo específicamente, usa la búsqueda web (no es opcional)
-para nombrar competidores reales de esta categoría antes de proponerlo — un entorno
+etapa. CRÍTICO — trabaja un solo campo nuevo a la vez: propones uno, llamas
+record_proposal de inmediato para ESE campo, y te DETIENES ahí a esperar que la persona
+lo valide o ajuste antes de proponer el siguiente. Nunca narres dos o más campos nuevos
+seguidos en el mismo turno sin llamar record_proposal entre uno y otro — si lo haces,
+esos campos quedan solo como texto en el chat y nunca se guardan en la pirámide, aunque
+se vean completos en la conversación.
+
+Para el Entorno competitivo específicamente, usa la búsqueda web (no es opcional) para
+nombrar competidores reales de esta categoría antes de proponerlo — un entorno
 competitivo inventado o genérico le resta credibilidad a toda la pirámide. Cuéntale a la
-persona qué encontraste antes de mostrar la propuesta. Para Asociaciones de marca y
-Personalidad, si hay insumos disponibles, propón primero apoyándote en ellos.
+persona qué encontraste antes de mostrar la propuesta.
+
+Asociaciones de marca: NO es un slogan ni un resumen de los beneficios racionales o
+emocionales (eso ya está en otro nivel de la pirámide, no lo repitas aquí). Son los
+ACTIVOS DE MARCA concretos, únicos y reconocibles que le pertenecen a esta marca en
+particular — lo que verías o reconocerías sin que te digan el nombre: colores
+distintivos, un sonido, un olor, un personaje o mascota, un símbolo o ícono, un programa
+o alianza con nombre propio, un elemento visual recurrente. Si hay insumos disponibles
+(por ejemplo un manual de marca o brief con estos elementos), propón primero apoyándote
+en ellos; si no hay ninguno identificable todavía, dilo con honestidad en vez de
+inventar uno genérico.
+
+Personalidad: si hay insumos disponibles, propón primero apoyándote en ellos.
 
 Esencia, Arquetipo (dominante + secundario) y Territorio de comunicación se PROPONEN,
 nunca se preguntan — en ese orden, y el Territorio va AL FINAL, después de tener toda la
@@ -321,8 +339,15 @@ pirámide completa (incluido el arquetipo), porque es la síntesis última de to
   no es" de la Etapa 1 — es una síntesis nueva, más corta y más evocadora, vista con todo
   el contexto de la pirámide completa.
 
-Usa record_proposal para cada campo nuevo. Cuando todos los campos estén completos,
-indica que la pirámide está lista para revisarse en la vista gráfica.`,
+Igual que arriba: propón Esencia, llama record_proposal, espera. Luego Arquetipo
+(dominante y secundario pueden ir en la misma llamada porque son un solo momento de
+decisión), llama record_proposal, espera. Por último Territorio de comunicación, llama
+record_proposal, espera. Nunca encadenes estos tres sin parar a esperar validación entre
+cada uno.
+
+Usa record_proposal para cada campo nuevo, siempre, nunca lo dejes solo en el texto.
+Cuando todos los campos estén completos, indica que la pirámide está lista para
+revisarse en la vista gráfica.`,
   },
   {
     number: 8,
