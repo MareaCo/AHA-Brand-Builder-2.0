@@ -326,32 +326,41 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
           <div
             className="cursor-pointer rounded-xl bg-aha-lime/20 p-3 text-center hover:bg-aha-lime/30"
             onClick={() => {
-              const v1 = prompt("Arquetipo dominante:", data.aparte.arquetipo_dominante || "");
+              const current = flattenToText(data.aparte.arquetipo_dominante);
+              const v1 = prompt("Arquetipo dominante:", current);
               if (v1 != null) onEditField("arquetipo_dominante", v1, "Arquetipo dominante");
             }}
           >
             <p className="text-[9px] font-bold uppercase tracking-wide text-aha-navy/60">Arquetipo dominante</p>
-            <p className="mt-0.5 text-xs font-semibold text-aha-navy">{data.aparte.arquetipo_dominante || "—"}</p>
+            <p className="mt-0.5 text-xs font-semibold text-aha-navy">
+              {flattenToText(data.aparte.arquetipo_dominante) || "—"}
+            </p>
           </div>
           <div
             className="cursor-pointer rounded-xl bg-aha-lime/10 p-3 text-center hover:bg-aha-lime/20"
             onClick={() => {
-              const v2 = prompt("Arquetipo secundario:", data.aparte.arquetipo_secundario || "");
+              const current = flattenToText(data.aparte.arquetipo_secundario);
+              const v2 = prompt("Arquetipo secundario:", current);
               if (v2 != null) onEditField("arquetipo_secundario", v2, "Arquetipo secundario");
             }}
           >
             <p className="text-[9px] font-bold uppercase tracking-wide text-aha-navy/60">Arquetipo secundario</p>
-            <p className="mt-0.5 text-xs font-semibold text-aha-navy">{data.aparte.arquetipo_secundario || "—"}</p>
+            <p className="mt-0.5 text-xs font-semibold text-aha-navy">
+              {flattenToText(data.aparte.arquetipo_secundario) || "—"}
+            </p>
           </div>
           <div
             className="cursor-pointer rounded-xl bg-aha-pale p-3 text-center hover:bg-aha-pale/70"
             onClick={() => {
-              const v3 = prompt("Territorio de comunicación:", data.aparte.territorio_marca || "");
+              const current = flattenToText(data.aparte.territorio_marca);
+              const v3 = prompt("Territorio de comunicación:", current);
               if (v3 != null) onEditField("territorio_comunicacion", v3, "Territorio de comunicación");
             }}
           >
             <p className="text-[9px] font-bold uppercase tracking-wide text-aha-navy/60">Territorio de comunicación</p>
-            <p className="mt-0.5 text-xs font-medium text-aha-navy">{data.aparte.territorio_marca || "—"}</p>
+            <p className="mt-0.5 text-xs font-medium text-aha-navy">
+              {flattenToText(data.aparte.territorio_marca) || "—"}
+            </p>
           </div>
         </div>
       </div>
