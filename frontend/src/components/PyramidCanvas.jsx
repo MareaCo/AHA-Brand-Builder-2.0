@@ -1,14 +1,50 @@
 import { forwardRef, useState } from "react";
 
+// Aplana cualquier objeto anidado (por ejemplo el perfil de Target de la Etapa 5, que
+// llega como { segmento_primario: { demografia, psicografia, ... }, ... }) a un texto
+// legible, en vez de mostrar el JSON crudo con llaves y comillas dentro de la pirámide.
+function flattenToText(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(flattenToText).filter(Boolean).join(". ");
+  if (typeof value === "object") {
+    return Object.entries(value)
+      .filter(([k]) => k !== "status")
+      .map(([, v]) => flattenToText(v))
+      .filter(Boolean)
+      .join(". ");
+  }
+  return String(value);
+}
+
 function renderValue(value) {
   if (value == null) return "";
   if (typeof value === "string") return value;
   if (Array.isArray(value)) {
     return value
-      .map((item) => (typeof item === "string" ? item : Object.values(item).filter(Boolean).join(" — ")))
+      .map((item) =>
+        typeof item === "string"
+          ? item
+          : Object.entries(item)
+              .filter(([k]) => k !== "status")
+              .map(([, v]) => v)
+              .filter(Boolean)
+              .join(" — ")
+      )
       .join(" · ");
   }
-  return JSON.stringify(value);
+  return flattenToText(value);
+}
+
+// Cada celda de la pirámide vive dentro de una banda con forma de trapecio (clip-path).
+// Si el texto es largo, la banda crece en altura y el borde inclinado del trapecio
+// termina cortando las palabras por los lados — por eso el contenido visible se limita
+// aquí; el valor completo sigue disponible al hacer click para editar (o al pasar el
+// mouse, vía el atributo title).
+function truncate(text, max) {
+  if (!text) return "—";
+  return text.length > max ? `${text.slice(0, max - 1).trim()}…` : text;
 }
 
 // Insets (% del ancho del trapezoide) de arriba/abajo por nivel, de la base (0)
@@ -37,9 +73,10 @@ const TONE_BG = {
   pale: "#e3f2b8",
 };
 
-function Cell({ label, value, editable, onSave, dark }) {
+function Cell({ label, value, editable, onSave, dark, maxChars = 90 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  const fullText = renderValue(value);
 
   if (editing) {
     return (
@@ -75,20 +112,20 @@ function Cell({ label, value, editable, onSave, dark }) {
     <div
       onClick={() => {
         if (!editable) return;
-        setDraft(renderValue(value));
+        setDraft(fullText);
         setEditing(true);
       }}
       className={[
-        "flex flex-1 flex-col items-center gap-0.5 px-2 py-1.5 text-center",
+        "flex flex-1 flex-col items-center gap-0.5 overflow-hidden px-2 py-1.5 text-center",
         editable ? "cursor-pointer hover:opacity-80" : "",
       ].join(" ")}
-      title={editable ? "Click para editar" : undefined}
+      title={fullText && fullText.length > maxChars ? fullText : editable ? "Click para editar" : undefined}
     >
       <span className={["text-[9px] font-bold uppercase tracking-wide", dark ? "text-white/70" : "text-aha-navy/60"].join(" ")}>
         {label}
       </span>
       <span className={["text-[11px] font-medium leading-tight", dark ? "text-white" : "text-aha-navy"].join(" ")}>
-        {renderValue(value) || "—"}
+        {truncate(fullText, maxChars)}
       </span>
     </div>
   );
@@ -129,24 +166,55 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 dark
                 editable={editable("esencia")}
                 onSave={(val) => onEditField("esencia", val, "Esencia")}
+                maxChars={90}
               />,
             ]}
           </Band>
 
           <Band level={4} tone="periwinkle" dividers={false}>
-            {[<Cell key="proposito" label="Propósito" value={v("proposito", "alto")} dark editable={false} />]}
+            {[
+              <Cell
+                key="proposito"
+                label="Propósito"
+                value={v("proposito", "alto")}
+                dark
+                editable={false}
+                maxChars={140}
+              />,
+            ]}
           </Band>
 
           <Band level={3} tone="blue" dividers>
             {[
-              <Cell key="br" label="Beneficio racional" value={v("beneficios_racionales", "medio")} dark editable={false} />,
-              <Cell key="be" label="Beneficio emocional" value={v("beneficios_emocionales", "medio")} dark editable={false} />,
+              <Cell
+                key="br"
+                label="Beneficio racional"
+                value={v("beneficios_racionales", "medio")}
+                dark
+                editable={false}
+                maxChars={90}
+              />,
+              <Cell
+                key="be"
+                label="Beneficio emocional"
+                value={v("beneficios_emocionales", "medio")}
+                dark
+                editable={false}
+                maxChars={90}
+              />,
             ]}
           </Band>
 
           <Band level={2} tone="periwinkle" dividers>
             {[
-              <Cell key="rtb" label="Atributos diferenciales" value={v("razones_para_creer", "medio")} dark editable={false} />,
+              <Cell
+                key="rtb"
+                label="Atributos diferenciales"
+                value={v("razones_para_creer", "medio")}
+                dark
+                editable={false}
+                maxChars={90}
+              />,
               <Cell
                 key="personalidad"
                 label="Personalidad"
@@ -154,12 +222,15 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 dark
                 editable={editable("personalidad")}
                 onSave={(val) => onEditField("personalidad", val, "Personalidad")}
+                maxChars={90}
               />,
             ]}
           </Band>
 
           <Band level={1} tone="lime" dividers={false}>
-            {[<Cell key="insight" label="Insight" value={v("insight", "base")} editable={false} />]}
+            {[
+              <Cell key="insight" label="Insight" value={v("insight", "base")} editable={false} maxChars={140} />,
+            ]}
           </Band>
 
           <Band level={0} tone="pale" dividers>
@@ -170,14 +241,16 @@ const PyramidCanvas = forwardRef(function PyramidCanvas({ data, synthesized, edi
                 value={v("entorno_competitivo", "base")}
                 editable={editable("entorno_competitivo")}
                 onSave={(val) => onEditField("entorno_competitivo", val, "Entorno competitivo")}
+                maxChars={70}
               />,
-              <Cell key="target" label="★ Target" value={v("target", "base")} editable={false} />,
+              <Cell key="target" label="★ Target" value={v("target", "base")} editable={false} maxChars={70} />,
               <Cell
                 key="asociaciones"
                 label="Asociaciones de marca"
                 value={v("asociaciones_marca", "base")}
                 editable={editable("asociaciones_marca")}
                 onSave={(val) => onEditField("asociaciones_marca", val, "Asociaciones de marca")}
+                maxChars={70}
               />,
             ]}
           </Band>
