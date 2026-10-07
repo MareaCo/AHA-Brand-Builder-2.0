@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Reglas de seguridad por defecto — conservadoras a propósito. La app hoy (versión
+// Node/Prisma) no tiene ningún sistema de login: cualquiera con la URL puede entrar.
+// Eso es aceptable mientras corre en tu propia Mac, pero sería un error grave dejarlo
+// así en Firestore, porque el contenido de estas sesiones es información confidencial
+// de negocio de los clientes de AHA Consulting (insumos, estrategia, data de mercado).
+//
+// Por eso esta versión EXIGE que la persona haya iniciado sesión (Firebase
+// Authentication) para leer o escribir cualquier cosa. Antes de desplegar a producción,
+// configura al menos un método de login (ej. "iniciar sesión con Google") en Firebase
+// Authentication para las cuentas de AHA Consulting que van a usar la app.
+//
+// Esta es una base inicial, no un modelo de permisos fino por cliente/marca — si más
+// adelante varias personas de AHA usan la misma instancia y necesitas que cada quien
+// solo vea sus propias sesiones, hay que añadir un campo "ownerUid" a cada documento de
+// nivel superior y condicionar el acceso a `request.auth.uid == resource.data.ownerUid`.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
