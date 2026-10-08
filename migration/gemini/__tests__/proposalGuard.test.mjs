@@ -43,4 +43,23 @@ check("un campo tipo lista nunca se rechaza a nivel de campo, aunque su status a
   assert.equal(r.rejected, false, "un campo tipo list jamás se bloquea aquí — la protección real vive en el merge por posición");
 });
 
+console.log("checkProposal — claves inválidas (el bug real encontrado en la prueba de la Etapa 5)");
+check("rechaza una clave que no existe en la etapa, aunque no esté bloqueada", () => {
+  // Esto es lo que debió pasar cuando el parser de respaldo de texto libre propuso
+  // "perfil_demografico_psicografico" en vez de la clave real "perfil_target".
+  const r = checkProposal("perfil_demografico_psicografico", {}, [{ key: "perfil_target" }]);
+  assert.equal(r.rejected, true);
+  assert.match(r.reason, /no es una clave válida/);
+});
+
+console.log("checkProposal — user_requested_change (reemplaza la detección por palabras clave)");
+check("un campo bloqueado sigue rechazándose si el modelo no marcó user_requested_change", () => {
+  const r = checkProposal("que_es", { que_es: { status: "validado_por_usuario", value: "x" } }, STAGE1_FIELDS, false);
+  assert.equal(r.rejected, true);
+});
+check("un campo bloqueado se permite SOLO si el modelo marcó user_requested_change: true", () => {
+  const r = checkProposal("que_es", { que_es: { status: "validado_por_usuario", value: "x" } }, STAGE1_FIELDS, true);
+  assert.equal(r.rejected, false);
+});
+
 console.log(`\n${passed} pruebas pasaron.`);

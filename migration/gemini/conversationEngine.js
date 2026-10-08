@@ -110,10 +110,10 @@ export async function runStageTurn({ stageNumber, accumulatedSummary, filesSumma
     const functionResponseParts = [];
     for (const call of functionCalls) {
       if (call.name === "record_proposal") {
-        const { field_key, field_label, rationale } = call.args;
+        const { field_key, field_label, rationale, user_requested_change } = call.args;
         const value = parseProposalValue(call.args.value);
 
-        const guard = checkProposal(field_key, fieldsState, stage.fields);
+        const guard = checkProposal(field_key, fieldsState, stage.fields, user_requested_change === true);
         if (guard.rejected) {
           functionResponseParts.push({
             functionResponse: { name: call.name, response: { result: guard.reason, error: true } },

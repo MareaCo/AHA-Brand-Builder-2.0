@@ -44,6 +44,16 @@ export function buildRecordProposalDeclaration(stage) {
           type: Type.STRING,
           description: "Justificación breve de por qué propones esto.",
         },
+        // Validado en producción (ver proposalGuard.js): esta es la pieza que reemplaza
+        // la detección de palabras clave ("ajustar", "revisar", etc.) que se intentó
+        // primero y daba falsos positivos. En vez de que el CÓDIGO busque esas palabras
+        // en el mensaje del usuario, se le pide al MODELO que decida por el contexto
+        // completo de la conversación y lo exprese aquí explícitamente.
+        user_requested_change: {
+          type: Type.BOOLEAN,
+          description:
+            "Ponlo en true ÚNICAMENTE si interpretas, por el contexto de la conversación, que el usuario pidió explícitamente modificar, rehacer o actualizar un campo que ya estaba validado o editado previamente. Si el usuario no lo pidió, omite este parámetro o pon false.",
+        },
       },
       required: ["field_key", "field_label", "value"],
     },
