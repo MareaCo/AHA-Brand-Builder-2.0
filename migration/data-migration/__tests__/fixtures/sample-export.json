@@ -1,0 +1,98 @@
+{
+  "client": {
+    "id": "client-autollantas",
+    "name": "Autollantas Nutibara",
+    "email": "contacto@autollantasnutibara.com",
+    "createdAt": "2026-10-08T00:16:31.131Z"
+  },
+  "brand": {
+    "id": "brand-nutibara",
+    "clientId": "client-autollantas",
+    "name": "Autollantas Nutibara",
+    "industry": "Automotriz",
+    "createdAt": "2026-10-08T00:16:31.137Z"
+  },
+  "session": {
+    "id": "session-autollantas-nutibara",
+    "brandId": "brand-nutibara",
+    "status": "completado",
+    "currentStage": 8,
+    "createdAt": "2026-10-08T00:16:31.139Z",
+    "updatedAt": "2026-10-08T00:16:31.139Z"
+  },
+  "stageData": [
+    {
+      "id": "cmuysdjfs00018onrkiqmtuys",
+      "sessionId": "session-autollantas-nutibara",
+      "stageNumber": 2,
+      "stageName": "Insight",
+      "content": "{\"fields\":{\"verdad\":{\"label\":\"Verdad\",\"value\":\"Los talleres suelen inventar daños que el carro no tiene.\",\"status\":\"validado_por_usuario\"},\"necesidad\":{\"label\":\"Necesidad (verdad + necesidad)\",\"value\":\"Necesitan confiar en que el diagnóstico es honesto.\",\"status\":\"validado_por_usuario\"},\"friccion\":{\"label\":\"Fricción (el 'pero...')\",\"value\":\"Pero no tienen forma de verificarlo sin ser mecánicos.\",\"status\":\"validado_por_usuario\"},\"insight_consolidado\":{\"label\":\"Insight consolidado\",\"value\":\"Los dueños de carro no confían en que les digan la verdad sobre lo que realmente necesitan.\",\"status\":\"validado_por_usuario\",\"rationale\":\"Validado con benchmarks de mercado.\"}},\"meta\":{\"insight_step\":7}}",
+      "status": "validado_por_usuario",
+      "createdAt": "2026-10-08T00:16:31.141Z",
+      "updatedAt": "2026-10-08T00:16:31.141Z"
+    },
+    {
+      "id": "cmuysdjfu00038onrz31758w9",
+      "sessionId": "session-autollantas-nutibara",
+      "stageNumber": 6,
+      "stageName": "Propuesta de Valor",
+      "content": "{\"fields\":{\"pilares\":{\"label\":\"Pilares de la propuesta de valor\",\"status\":\"validado_por_usuario\",\"value\":[{\"atributo\":\"Confianza\",\"materializacion\":\"Diagnóstico honesto, sin inventar daños.\",\"status\":\"validado_por_usuario\"},{\"atributo\":\"Rapidez\",\"materializacion\":\"Entrega en menos de 24 horas.\",\"status\":\"validado_por_usuario\"}]}},\"meta\":{}}",
+      "status": "validado_por_usuario",
+      "createdAt": "2026-10-08T00:16:31.147Z",
+      "updatedAt": "2026-10-08T00:16:31.147Z"
+    },
+    {
+      "id": "cmuysdjfw00058onreoczyn3o",
+      "sessionId": "session-autollantas-nutibara",
+      "stageNumber": 7,
+      "stageName": "Pirámide de Marca",
+      "content": "{\"fields\":{\"entorno_competitivo\":{\"label\":\"Entorno competitivo\",\"value\":\"Mercado fragmentado de talleres informales.\",\"status\":\"validado_por_usuario\"},\"asociaciones_marca\":{\"label\":\"Asociaciones de marca\",\"value\":\"Confianza, rapidez, garantía.\",\"status\":\"validado_por_usuario\"},\"personalidad\":{\"label\":\"Personalidad\",\"value\":\"Cercana, honesta, resolutiva.\",\"status\":\"validado_por_usuario\"},\"esencia\":{\"label\":\"Esencia\",\"value\":\"Tranquilidad sobre ruedas.\",\"status\":\"validado_por_usuario\"},\"arquetipo_dominante\":{\"label\":\"Arquetipo dominante\",\"value\":\"El Cuidador\",\"status\":\"validado_por_usuario\"},\"arquetipo_secundario\":{\"label\":\"Arquetipo secundario\",\"value\":\"El Sabio\",\"status\":\"validado_por_usuario\"},\"territorio_comunicacion\":{\"label\":\"Territorio de comunicación\",\"value\":\"La seguridad de tu familia no se negocia.\",\"status\":\"validado_por_usuario\"}},\"meta\":{}}",
+      "status": "validado_por_usuario",
+      "createdAt": "2026-10-08T00:16:31.149Z",
+      "updatedAt": "2026-10-08T00:16:31.149Z"
+    }
+  ],
+  "files": [
+    {
+      "id": "cmuysdjfy00078onry2fjfms0",
+      "sessionId": "session-autollantas-nutibara",
+      "filename": "brief-autollantas.pdf",
+      "fileType": "pdf",
+      "storagePath": "/uploads/session-autollantas-nutibara/brief-autollantas.pdf",
+      "extractedSummary": "Brief inicial con historia de la empresa y objetivos de marca.",
+      "extractedText": "Autollantas Nutibara nació en 1974...",
+      "createdAt": "2026-10-08T00:16:31.151Z"
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "cmuysdjg100098onrfk9zmdm4",
+      "sessionId": "session-autollantas-nutibara",
+      "type": "piramide",
+      "content": "{\"base\":{},\"medio\":{},\"alto\":{},\"cuspide\":{}}",
+      "format": "svg",
+      "version": 1,
+      "createdAt": "2026-10-08T00:16:31.153Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "cmuysdjg3000b8onrzpm9twz0",
+      "sessionId": "session-autollantas-nutibara",
+      "stageNumber": 6,
+      "role": "assistant",
+      "content": "Aquí está tu primera propuesta de pilares.",
+      "meta": "{\"proposals\":[{\"field_key\":\"pilares\"}],\"citations\":[]}",
+      "createdAt": "2026-10-08T00:16:31.155Z"
+    },
+    {
+      "id": "cmuysdjg6000d8onr4hscom1i",
+      "sessionId": "session-autollantas-nutibara",
+      "stageNumber": 6,
+      "role": "user",
+      "content": "(mensaje oculto de auto-arranque)",
+      "meta": "{\"hidden\":true}",
+      "createdAt": "2026-10-08T00:16:31.159Z"
+    }
+  ]
+}
