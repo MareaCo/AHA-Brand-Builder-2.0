@@ -53,6 +53,22 @@ escrituras. La prueba "transformAll NO duplica el documento de cliente/marca..."
 - Las fechas (`createdAt`, `updatedAt`) se convierten a objetos `Date` de JavaScript —
   el SDK de Firebase Admin las guarda automáticamente como Timestamp de Firestore.
 
+## Si un cliente tiene varias versiones/iteraciones guardadas
+
+Si al exportar con `--all` aparece un mismo cliente repetido con nombres como
+"Autollantas Nutibara", "Autollantas Nutibara V2", "Autollantas Nutibara V3" (versiones
+de prueba o iteraciones, no clientes distintos), usa `listExportedSessions.js` para ver
+cuál sesión es la más reciente de cada una antes de decidir qué migrar:
+
+```bash
+node migration/data-migration/listExportedSessions.js todos-los-clientes.json
+```
+
+Esto imprime una tabla (cliente / marca / sessionId / estado / etapa / última
+actualización) ordenada de más reciente a más antigua, para identificar la sesión real de
+cada cliente por fecha, no por el nombre. Con el `sessionId` correcto en mano, exporta
+solo esa sesión puntual (ver la sección de abajo) en vez de usar `--all`.
+
 ## Cómo migrar TODOS los clientes reales de Catalina (Autollantas, Kansha, y los que sigan)
 
 Corre estos comandos desde la carpeta raíz del proyecto (`AHA-Brand-Builder-2.0`) — no
