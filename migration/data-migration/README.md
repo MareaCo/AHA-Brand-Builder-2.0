@@ -1,15 +1,17 @@
-# Sprint 5 — Migración de la sesión real (Autollantas Nutibara) a Firestore
+# Sprint 5 — Migración de los clientes reales (Autollantas Nutibara, Kansha, y los que
+# sigan) a Firestore
 
-Entregable: exportar la sesión real ya construida con Claude + SQLite, y pasarla a la
-estructura de Firestore del Sprint 1 — sin perder nada de lo ya validado.
+Entregable: exportar TODOS los clientes/marcas/sesiones ya construidos con Claude +
+SQLite, y pasarlos a la estructura de Firestore del Sprint 1 — sin perder nada de lo ya
+validado, y de una sola vez (no cliente por cliente).
 
 ## Los 3 pasos, y qué tan probado está cada uno
 
 | Paso | Archivo | Qué tan probado |
 |---|---|---|
-| 1. Exportar de SQLite | `exportFromSqlite.js` | **Probado de verdad**: corrí este archivo contra una base de datos SQLite real (sembrada con Prisma, con la misma estructura exacta de la app), no contra datos simulados a mano. |
-| 2. Transformar al formato de Firestore | `transformToFirestore.js` | **Probado de verdad**, con la salida REAL del paso 1 como fixture (`__tests__/fixtures/sample-export.json`) — 10/10 pruebas pasan. |
-| 3. Importar a Firestore | `importToFirestore.js` | **No probado** — necesita una credencial real de Firebase (cuenta de servicio) que no existe en este entorno. La lógica es simple (un solo `batch.commit()`) porque ya se apoya en el paso 2, que sí está probado. |
+| 1. Exportar de SQLite | `exportFromSqlite.js` | **Probado de verdad**: corrí este archivo (con `--all`, el mismo modo que vas a usar) contra una base de datos SQLite real con 2 clientes distintos (uno con 2 sesiones bajo la misma marca), sembrada con Prisma — no contra datos simulados a mano. |
+| 2. Transformar al formato de Firestore | `transformToFirestore.js` | **Probado de verdad**, con la salida REAL del paso 1 como fixture (`__tests__/fixtures/sample-export.json` y `sample-export-all.json`) — 13/13 pruebas pasan. |
+| 3. Importar a Firestore | `importToFirestore.js` | **No probado** — necesita una credencial real de Firebase (cuenta de servicio) que no existe en este entorno. La lógica es simple (lotes de `batch.commit()`) porque ya se apoya en el paso 2, que sí está probado. |
 
 ## El hallazgo real de este sprint: no se puede copiar el dato tal cual
 
@@ -32,6 +34,16 @@ La prueba "transformStageDataRow (Etapa 6, pilares incompletos)" en `__tests__/`
 este caso exacto y confirma que, tras la migración, ese campo queda correctamente en
 `propuesto_por_ia`, no en el `validado_por_usuario` desactualizado que tenía en SQLite.
 
+## El hallazgo real al migrar VARIOS clientes a la vez: no duplicar cliente/marca
+
+Si un cliente tiene más de una sesión bajo la misma marca (como Autollantas Nutibara en
+la prueba real), el documento `clients/{id}` y `brands/{id}` de ese cliente saldría
+repetido una vez por cada sesión. Firestore no permite escribir dos veces al mismo
+documento dentro de un solo lote (`batch`) — así que `transformAll()` (la función que usa
+`exportFromSqlite.js --all`) quita los duplicados por `path` antes de entregar la lista de
+escrituras. La prueba "transformAll NO duplica el documento de cliente/marca..." en
+`__tests__/` reproduce este caso exacto con datos reales de 2 clientes.
+
 ## Otros 2 cambios de formato (ya veníamos viendo este patrón desde el Sprint 4)
 
 - `StageData.content` y `Message.meta` son strings JSON en SQLite — en Firestore pasan a
@@ -41,16 +53,16 @@ este caso exacto y confirma que, tras la migración, ese campo queda correctamen
 - Las fechas (`createdAt`, `updatedAt`) se convierten a objetos `Date` de JavaScript —
   el SDK de Firebase Admin las guarda automáticamente como Timestamp de Firestore.
 
-## Cómo migrar la sesión real de Catalina, paso a paso
+## Cómo migrar TODOS los clientes reales de Catalina (Autollantas, Kansha, y los que sigan)
 
 ```bash
-# 1. Exportar la sesión real (reemplaza el id por el de la sesión real — se ve en Prisma
-#    Studio: cd backend && npx prisma studio, o en la tabla `sessions`).
+# 1. Exportar TODOS los clientes/marcas/sesiones reales de una sola vez.
 cd backend
-node ../migration/data-migration/exportFromSqlite.js <sessionId real> > sesion-real.json
+node ../migration/data-migration/exportFromSqlite.js --all > todos-los-clientes.json
 
-# 2. Revisar el archivo sesion-real.json a simple vista — confirma que los campos que
-#    esperas ver (insight, pilares, pirámide) estén ahí antes de seguir.
+# 2. Revisar el archivo todos-los-clientes.json a simple vista — confirma que aparecen
+#    Autollantas Nutibara Y Kansha, con sus campos esperados (insight, pilares,
+#    pirámide), antes de seguir.
 
 # 3. Importar a Firestore (necesita la credencial de la cuenta de servicio de Firebase,
 #    descargada desde la consola de Firebase → Configuración del proyecto → Cuentas de
@@ -58,8 +70,20 @@ node ../migration/data-migration/exportFromSqlite.js <sessionId real> > sesion-r
 cd ../migration/data-migration
 npm install firebase-admin
 GOOGLE_APPLICATION_CREDENTIALS=/ruta/a/tu-credencial.json \
-  node importToFirestore.js ../../backend/sesion-real.json
+  node importToFirestore.js ../../backend/todos-los-clientes.json
 ```
+
+Si en vez de todo quieres migrar solo UNA sesión puntual (por ejemplo, para probar con un
+cliente nuevo antes de hacerlo con todos), reemplaza el paso 1 por:
+
+```bash
+node ../migration/data-migration/exportFromSqlite.js <sessionId real> > una-sesion.json
+```
+
+El id de una sesión puntual se ve en Prisma Studio (`cd backend && npx prisma studio`, en
+la tabla `sessions`) — `importToFirestore.js` detecta solo, por la forma del archivo, si
+le estás dando el export de `--all` (un array) o el de una sola sesión (un objeto), así
+que el paso 3 es igual en ambos casos.
 
 Nota sobre el paso 1: `exportFromSqlite.js` usa el cliente de Prisma ya instalado en
 `backend/`, por eso el comando debe correr desde ESA carpeta (Node busca
@@ -69,42 +93,48 @@ de `migration/`).
 ## Cómo verificar esto antes de confiar en él
 
 ```bash
-node migration/data-migration/__tests__/transformToFirestore.test.mjs   # 10/10 deben pasar
+node migration/data-migration/__tests__/transformToFirestore.test.mjs   # 13/13 deben pasar
 ```
 
 ## Cómo aplicarlo dentro de Google AI Studio
 
 Esta parte no se "pega" en el chat de Build como los sprints anteriores — es un script de
-migración de datos que se corre UNA SOLA VEZ, por fuera de la app, para llevar la sesión
-real de Autollantas Nutibara a la base de Firestore que ya conectaste en los Sprints 1-4.
-Pégale esto al asistente de Build solo si quieres que te ayude a adaptar los archivos a la
-estructura exacta de tu proyecto en AI Studio (por ejemplo, si tu backend vive en Cloud
-Functions en vez de un servidor Express local):
+migración de datos que se corre UNA SOLA VEZ, por fuera de la app, para llevar TODOS los
+clientes reales (Autollantas Nutibara, Kansha, y los que sigan) a la base de Firestore
+que ya conectaste en los Sprints 1-4. Pégale esto al asistente de Build solo si quieres
+que te ayude a adaptar los archivos a la estructura exacta de tu proyecto en AI Studio
+(por ejemplo, si tu backend vive en Cloud Functions en vez de un servidor Express local):
 
 ```
-Necesito migrar los datos de una sesión real ya construida en la versión anterior de la
-app (con SQLite) a la base de Firestore de este proyecto. Te adjunto 3 archivos ya
-escritos y probados:
+Necesito migrar los datos de TODOS los clientes reales ya construidos en la versión
+anterior de la app (con SQLite) a la base de Firestore de este proyecto — no solo uno,
+todos los que existan (hoy son Autollantas Nutibara y Kansha, pero puede haber más en el
+futuro). Te adjunto 3 archivos ya escritos y probados:
 
-1. exportFromSqlite.js — lee una sesión completa (cliente, marca, sesión, las etapas con
-   sus campos, archivos subidos, entregables y mensajes) desde la base de datos SQLite
-   anterior, usando Prisma, y la vuelca a un archivo JSON. Esto se corre una sola vez,
+1. exportFromSqlite.js — con la opción --all, recorre TODOS los clientes, marcas y
+   sesiones de la base de datos SQLite anterior (usando Prisma) y los vuelca a un solo
+   archivo JSON (un array, un árbol completo por sesión). Esto se corre una sola vez,
    fuera de tu entorno — no necesitas adaptarlo, solo correrlo donde está la base de
    datos SQLite real.
 
-2. transformToFirestore.js — transforma ese JSON a la estructura exacta de colecciones
-   de Firestore que ya implementamos en el Sprint 1. Dos cosas importantes que SÍ debes
-   mantener (están probadas, no las simplifiques): (a) nunca copia el status guardado en
-   SQLite tal cual — siempre lo recalcula desde los datos reales de cada campo, porque
-   encontramos casos con el status desactualizado; (b) algunos campos de texto en SQLite
-   (el contenido de cada etapa, el meta de cada mensaje) son strings JSON que hay que
-   convertir a objetos nativos antes de guardarlos en Firestore — salvo el contenido de
-   los entregables, que se deja como string tal cual.
+2. transformToFirestore.js — la función transformAll() transforma ese array a la
+   estructura exacta de colecciones de Firestore que ya implementamos en el Sprint 1.
+   Tres cosas importantes que SÍ debes mantener (están probadas, no las simplifiques):
+   (a) nunca copia el status guardado en SQLite tal cual — siempre lo recalcula desde los
+   datos reales de cada campo, porque encontramos casos con el status desactualizado;
+   (b) algunos campos de texto en SQLite (el contenido de cada etapa, el meta de cada
+   mensaje) son strings JSON que hay que convertir a objetos nativos antes de guardarlos
+   en Firestore — salvo el contenido de los entregables, que se deja como string tal
+   cual; (c) CRÍTICO — cuando un mismo cliente o marca tiene más de una sesión, su
+   documento de cliente/marca NO debe escribirse dos veces (Firestore rechaza escribir
+   al mismo documento dos veces dentro de un solo lote) — hay que quitar duplicados por
+   la ruta del documento antes de escribir.
 
-3. importToFirestore.js — escribe el resultado del paso 2 en Firestore en un solo lote
-   (batch). Si tu proyecto necesita que esto corra como una Cloud Function en vez de un
-   script de línea de comandos, pórtalo así, pero mantén la misma lógica: un solo batch
-   atómico, nunca escrituras sueltas documento por documento.
+3. importToFirestore.js — escribe el resultado del paso 2 en Firestore, dividido en lotes
+   de como máximo 400-500 operaciones cada uno (el límite real de Firestore es 500 por
+   lote). Si tu proyecto necesita que esto corra como una Cloud Function en vez de un
+   script de línea de comandos, pórtalo así, pero mantén la misma lógica: lotes atómicos,
+   nunca escrituras sueltas documento por documento.
 
 Ayúdame a adaptar estos 3 archivos a la estructura real de mi proyecto en AI Studio.
 ```

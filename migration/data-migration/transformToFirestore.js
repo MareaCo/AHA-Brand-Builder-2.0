@@ -167,3 +167,20 @@ export function transformSessionTree(exportedJson) {
 
   return ops;
 }
+
+// Igual que transformSessionTree(), pero para el export de --all (varios clientes,
+// varias sesiones, en un array). Cuando dos sesiones comparten el mismo cliente o la
+// misma marca (ej. dos sesiones de "Autollantas Nutibara"), el documento de ese
+// cliente/marca saldría repetido con el mismo `path` — Firestore no permite escribir dos
+// veces al mismo documento dentro de un solo batch, así que aquí se dedupe por path,
+// quedándose con la primera aparición (son la misma fila de origen, así que el contenido
+// es idéntico).
+export function transformAll(exportedSessions) {
+  const byPath = new Map();
+  for (const exportedJson of exportedSessions) {
+    for (const op of transformSessionTree(exportedJson)) {
+      if (!byPath.has(op.path)) byPath.set(op.path, op);
+    }
+  }
+  return [...byPath.values()];
+}

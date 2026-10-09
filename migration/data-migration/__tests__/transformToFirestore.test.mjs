@@ -21,10 +21,16 @@ import {
   transformDeliverable,
   transformMessage,
   transformSessionTree,
+  transformAll,
 } from "../transformToFirestore.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixture = JSON.parse(readFileSync(join(__dirname, "fixtures/sample-export.json"), "utf-8"));
+// Salida real de `exportFromSqlite.js --all` contra una base de prueba con 2 clientes
+// reales (Autollantas Nutibara, con 2 sesiones bajo la misma marca, y Kansha, un cliente
+// totalmente distinto) — para probar que --all sí trae todos los clientes, y que no
+// duplica el documento de cliente/marca cuando dos sesiones lo comparten.
+const allFixture = JSON.parse(readFileSync(join(__dirname, "fixtures/sample-export-all.json"), "utf-8"));
 
 let passed = 0;
 function check(label, fn) {
@@ -113,6 +119,35 @@ check("transformSessionTree devuelve una operación por cada fila real del expor
   const paths = ops.map((o) => o.path);
   assert.ok(paths.includes("sessions/session-autollantas-nutibara/stageData/6"));
   assert.ok(paths.includes(`sessions/session-autollantas-nutibara/messages/${fixture.messages[1].id}`));
+});
+
+console.log("transformAll — exportar varios clientes reales a la vez (--all)");
+
+check("transformAll trae los 2 clientes reales (Autollantas Nutibara y Kansha)", () => {
+  const ops = transformAll(allFixture);
+  const clientPaths = ops.filter((o) => o.path.match(/^clients\/[^/]+$/)).map((o) => o.data.name);
+  assert.deepEqual(new Set(clientPaths), new Set(["Autollantas Nutibara", "Kansha"]));
+});
+
+check("transformAll NO duplica el documento de cliente/marca cuando 2 sesiones los comparten", () => {
+  // En el fixture, Autollantas Nutibara tiene 2 sesiones bajo la misma marca — sin el
+  // dedupe por path, Firestore rechazaría el batch por escribir 2 veces al mismo
+  // documento.
+  const ops = transformAll(allFixture);
+  const paths = ops.map((o) => o.path);
+  const uniquePaths = new Set(paths);
+  assert.equal(paths.length, uniquePaths.size, "no debe haber ningún path repetido en la lista de operaciones");
+});
+
+check("transformAll incluye las 2 sesiones de Autollantas Y la sesión de Kansha, cada una con su propia stageData", () => {
+  const ops = transformAll(allFixture);
+  const sessionIds = allFixture.map((s) => s.session.id);
+  for (const sessionId of sessionIds) {
+    assert.ok(
+      ops.some((o) => o.path.startsWith(`sessions/${sessionId}/stageData/`)),
+      `debe haber al menos un stageData para la sesión ${sessionId}`
+    );
+  }
 });
 
 console.log(`\n${passed} pruebas pasaron.`);

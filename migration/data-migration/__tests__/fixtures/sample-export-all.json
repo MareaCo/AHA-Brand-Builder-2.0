@@ -1,0 +1,116 @@
+[
+  {
+    "client": {
+      "id": "cmv1d2ko50000katsy825ahpu",
+      "name": "Autollantas Nutibara",
+      "email": "contacto@autollantasnutibara.com",
+      "createdAt": "2026-10-09T19:31:23.813Z"
+    },
+    "brand": {
+      "id": "cmv1d2koa0002katst4qqmrsr",
+      "clientId": "cmv1d2ko50000katsy825ahpu",
+      "name": "Autollantas Nutibara",
+      "industry": "Automotriz",
+      "createdAt": "2026-10-09T19:31:23.818Z"
+    },
+    "session": {
+      "id": "cmv1d2koe0004katshhop7j2m",
+      "brandId": "cmv1d2koa0002katst4qqmrsr",
+      "status": "completado",
+      "currentStage": 8,
+      "createdAt": "2026-10-09T19:31:23.822Z",
+      "updatedAt": "2026-10-09T19:31:23.822Z"
+    },
+    "stageData": [
+      {
+        "id": "cmv1d2koh0006katswyn2xojm",
+        "sessionId": "cmv1d2koe0004katshhop7j2m",
+        "stageNumber": 5,
+        "stageName": "Definición del Target",
+        "content": "{\"fields\":{\"perfil_target\":{\"label\":\"Perfil del target\",\"value\":\"Conductores responsables.\",\"status\":\"validado_por_usuario\"}},\"meta\":{}}",
+        "status": "validado_por_usuario",
+        "createdAt": "2026-10-09T19:31:23.826Z",
+        "updatedAt": "2026-10-09T19:31:23.826Z"
+      }
+    ],
+    "files": [],
+    "deliverables": [],
+    "messages": []
+  },
+  {
+    "client": {
+      "id": "cmv1d2ko50000katsy825ahpu",
+      "name": "Autollantas Nutibara",
+      "email": "contacto@autollantasnutibara.com",
+      "createdAt": "2026-10-09T19:31:23.813Z"
+    },
+    "brand": {
+      "id": "cmv1d2koa0002katst4qqmrsr",
+      "clientId": "cmv1d2ko50000katsy825ahpu",
+      "name": "Autollantas Nutibara",
+      "industry": "Automotriz",
+      "createdAt": "2026-10-09T19:31:23.818Z"
+    },
+    "session": {
+      "id": "cmv1d2kol0008kats7o5v8ni7",
+      "brandId": "cmv1d2koa0002katst4qqmrsr",
+      "status": "en_progreso",
+      "currentStage": 3,
+      "createdAt": "2026-10-09T19:31:23.829Z",
+      "updatedAt": "2026-10-09T19:31:23.829Z"
+    },
+    "stageData": [
+      {
+        "id": "cmv1d2koo000akatsx1clw0op",
+        "sessionId": "cmv1d2kol0008kats7o5v8ni7",
+        "stageNumber": 1,
+        "stageName": "Territorio de Marca",
+        "content": "{\"fields\":{\"que_es\":{\"label\":\"¿Qué es?\",\"value\":\"Un taller de confianza.\",\"status\":\"propuesto_por_ia\"}},\"meta\":{}}",
+        "status": "propuesto_por_ia",
+        "createdAt": "2026-10-09T19:31:23.832Z",
+        "updatedAt": "2026-10-09T19:31:23.832Z"
+      }
+    ],
+    "files": [],
+    "deliverables": [],
+    "messages": []
+  },
+  {
+    "client": {
+      "id": "cmv1d2kor000bkatss25dw5v2",
+      "name": "Kansha",
+      "email": "hola@kansha.co",
+      "createdAt": "2026-10-09T19:31:23.836Z"
+    },
+    "brand": {
+      "id": "cmv1d2kov000dkats4uke5lcu",
+      "clientId": "cmv1d2kor000bkatss25dw5v2",
+      "name": "Kansha",
+      "industry": "Bienestar",
+      "createdAt": "2026-10-09T19:31:23.839Z"
+    },
+    "session": {
+      "id": "cmv1d2koy000fkats2hqfrn5j",
+      "brandId": "cmv1d2kov000dkats4uke5lcu",
+      "status": "en_progreso",
+      "currentStage": 2,
+      "createdAt": "2026-10-09T19:31:23.843Z",
+      "updatedAt": "2026-10-09T19:31:23.843Z"
+    },
+    "stageData": [
+      {
+        "id": "cmv1d2kp2000hkats9ug4ab8e",
+        "sessionId": "cmv1d2koy000fkats2hqfrn5j",
+        "stageNumber": 2,
+        "stageName": "Insight de Marca",
+        "content": "{\"fields\":{\"verdad\":{\"label\":\"Verdad\",\"value\":\"La gente asocia bienestar con caro.\",\"status\":\"validado_por_usuario\"}},\"meta\":{\"insight_step\":2}}",
+        "status": "propuesto_por_ia",
+        "createdAt": "2026-10-09T19:31:23.846Z",
+        "updatedAt": "2026-10-09T19:31:23.846Z"
+      }
+    ],
+    "files": [],
+    "deliverables": [],
+    "messages": []
+  }
+]

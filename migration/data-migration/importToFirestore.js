@@ -8,24 +8,34 @@
 // del proyecto → Cuentas de servicio → "Generar nueva clave privada" → descarga el
 // archivo .json y guárdalo FUERA de este repositorio (nunca lo subas a git).
 //
-// Uso:
+// Uso (acepta tanto el export de una sola sesión como el de --all con varios clientes):
 //   cd migration/data-migration
 //   npm install firebase-admin   (una sola vez)
 //   GOOGLE_APPLICATION_CREDENTIALS=/ruta/a/tu-credencial.json \
-//     node importToFirestore.js sesion-exportada.json
+//     node importToFirestore.js todos-los-clientes.json
 //
-// Donde "sesion-exportada.json" es el archivo que produjo exportFromSqlite.js.
+// Donde el archivo .json es el que produjo exportFromSqlite.js (con --all o con un
+// sessionId puntual — este script detecta cuál de los dos es).
 //
 // Por qué se escribe en lotes (batch) y no documento por documento: Firestore permite
-// hasta 500 escrituras por lote, y un lote es atómico (si una escritura falla, ninguna se
-// aplica) — más seguro que escribir una por una y quedar con datos a medias si algo
-// truena a mitad de camino. Una sesión completa de esta app (client + brand + session +
-// hasta 9 stageData + archivos + entregables + mensajes) nunca se acerca a 500.
+// hasta 500 escrituras por lote, y un lote es atómico (si una escritura falla dentro de
+// ese lote, ninguna de ese lote se aplica) — más seguro que escribir una por una y
+// quedar con datos a medias si algo truena a mitad de camino. Se dividen las operaciones
+// en lotes de 400 (con margen bajo el límite de 500) para que esto funcione igual con una
+// sola sesión o con todos los clientes reales de una sola vez.
 
 import { readFileSync } from "node:fs";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { transformSessionTree } from "./transformToFirestore.js";
+import { transformSessionTree, transformAll } from "./transformToFirestore.js";
+
+const BATCH_SIZE = 400;
+
+function chunk(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) chunks.push(array.slice(i, i + size));
+  return chunks;
+}
 
 const exportedFilePath = process.argv[2];
 if (!exportedFilePath) {
@@ -34,20 +44,21 @@ if (!exportedFilePath) {
 }
 
 const exportedJson = JSON.parse(readFileSync(exportedFilePath, "utf-8"));
-const ops = transformSessionTree(exportedJson);
+
+// --all produce un array (una entrada por sesión); un export puntual produce un solo
+// objeto con { client, brand, session, ... }.
+const ops = Array.isArray(exportedJson) ? transformAll(exportedJson) : transformSessionTree(exportedJson);
 
 initializeApp();
 const db = getFirestore();
 
-const batch = db.batch();
-for (const op of ops) {
-  batch.set(db.doc(op.path), op.data);
-}
-
 console.log(`Escribiendo ${ops.length} documentos en Firestore...`);
 for (const op of ops) console.log(`  - ${op.path}`);
 
-await batch.commit();
+for (const group of chunk(ops, BATCH_SIZE)) {
+  const batch = db.batch();
+  for (const op of group) batch.set(db.doc(op.path), op.data);
+  await batch.commit();
+}
 
-console.log("\nListo. Verifica en la consola de Firebase que la sesión aparezca completa:");
-console.log(`  brands/${exportedJson.brand.id}/sessions/${exportedJson.session.id}`);
+console.log("\nListo. Verifica en la consola de Firebase que cada sesión aparezca completa.");
