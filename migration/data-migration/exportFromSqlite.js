@@ -2,28 +2,43 @@
 // archivos, entregables, mensajes) desde la base de datos SQLite real de la app actual,
 // a un único archivo JSON.
 //
-// Se ejecuta DESDE backend/ (necesita el cliente de Prisma ya generado ahí) contra la
-// base de datos real, nunca contra una copia — es un export de solo lectura, no borra ni
-// modifica nada:
+// Se corre desde CUALQUIER carpeta (no es necesario hacer `cd backend` primero) contra
+// la base de datos real, nunca contra una copia — es un export de solo lectura, no borra
+// ni modifica nada:
 //
-//   cd backend
-//   node ../migration/data-migration/exportFromSqlite.js --all > todos-los-clientes.json
-//   node ../migration/data-migration/exportFromSqlite.js <sessionId> > una-sesion.json
+//   node migration/data-migration/exportFromSqlite.js --all > todos-los-clientes.json
+//   node migration/data-migration/exportFromSqlite.js <sessionId> > una-sesion.json
 //
 // --all exporta TODOS los clientes/marcas/sesiones reales que existan en la base de
 // datos (por ejemplo, Autollantas Nutibara y Kansha al mismo tiempo) — produce un array
 // con un árbol completo por cada sesión. <sessionId> exporta solo una sesión puntual (el
 // id de la fila en la tabla `sessions`, visible en Prisma Studio con `npx prisma studio`).
 //
+// Por qué esto no es un simple `import { PrismaClient } from "@prisma/client"`: este
+// archivo vive en migration/data-migration/, pero el cliente de Prisma ya generado solo
+// existe en backend/node_modules/ — Node busca node_modules subiendo desde la carpeta del
+// archivo que hace el import, nunca en una carpeta hermana, así que un import normal aquí
+// nunca lo encuentra (sin importar desde dónde se corra el comando). Por eso se resuelve
+// a mano, apuntando directo a esa carpeta.
+//
 // PROBADO en este entorno contra una base de datos SQLite de prueba sembrada con datos
 // representativos de 2 clientes distintos (incluyendo los casos difíciles: un pilar
 // todavía en formato narrado viejo, y un status agregado "pegado" de versiones
-// anteriores) — ver README.md, sección de verificación. No se probó contra la base de
-// datos real de producción porque esta vive solo en la máquina de Catalina, no en este
-// entorno.
+// anteriores), ejecutando el comando literal de arriba — ver README.md, sección de
+// verificación. No se probó contra la base de datos real de producción porque esta vive
+// solo en la máquina de Catalina, no en este entorno.
 
-import { PrismaClient } from "@prisma/client";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const requireFromBackend = createRequire(join(__dirname, "../../backend/package.json"));
+const { PrismaClient } = requireFromBackend("@prisma/client");
+
+// Sin pasar ninguna opción: Prisma Client resuelve DATABASE_URL (y la ruta del archivo
+// .db, si es relativa) igual que siempre lo ha hecho para la app actual — relativo a la
+// carpeta del propio schema.prisma, no a la carpeta desde donde se corre este script.
 const prisma = new PrismaClient();
 
 const SESSION_INCLUDE = {

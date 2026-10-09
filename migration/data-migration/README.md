@@ -55,10 +55,12 @@ escrituras. La prueba "transformAll NO duplica el documento de cliente/marca..."
 
 ## Cómo migrar TODOS los clientes reales de Catalina (Autollantas, Kansha, y los que sigan)
 
+Corre estos comandos desde la carpeta raíz del proyecto (`AHA-Brand-Builder-2.0`) — no
+hace falta entrar a ninguna subcarpeta antes:
+
 ```bash
 # 1. Exportar TODOS los clientes/marcas/sesiones reales de una sola vez.
-cd backend
-node ../migration/data-migration/exportFromSqlite.js --all > todos-los-clientes.json
+node migration/data-migration/exportFromSqlite.js --all > todos-los-clientes.json
 
 # 2. Revisar el archivo todos-los-clientes.json a simple vista — confirma que aparecen
 #    Autollantas Nutibara Y Kansha, con sus campos esperados (insight, pilares,
@@ -67,17 +69,17 @@ node ../migration/data-migration/exportFromSqlite.js --all > todos-los-clientes.
 # 3. Importar a Firestore (necesita la credencial de la cuenta de servicio de Firebase,
 #    descargada desde la consola de Firebase → Configuración del proyecto → Cuentas de
 #    servicio).
-cd ../migration/data-migration
+cd migration/data-migration
 npm install firebase-admin
 GOOGLE_APPLICATION_CREDENTIALS=/ruta/a/tu-credencial.json \
-  node importToFirestore.js ../../backend/todos-los-clientes.json
+  node importToFirestore.js ../../todos-los-clientes.json
 ```
 
 Si en vez de todo quieres migrar solo UNA sesión puntual (por ejemplo, para probar con un
 cliente nuevo antes de hacerlo con todos), reemplaza el paso 1 por:
 
 ```bash
-node ../migration/data-migration/exportFromSqlite.js <sessionId real> > una-sesion.json
+node migration/data-migration/exportFromSqlite.js <sessionId real> > una-sesion.json
 ```
 
 El id de una sesión puntual se ve en Prisma Studio (`cd backend && npx prisma studio`, en
@@ -85,10 +87,10 @@ la tabla `sessions`) — `importToFirestore.js` detecta solo, por la forma del a
 le estás dando el export de `--all` (un array) o el de una sola sesión (un objeto), así
 que el paso 3 es igual en ambos casos.
 
-Nota sobre el paso 1: `exportFromSqlite.js` usa el cliente de Prisma ya instalado en
-`backend/`, por eso el comando debe correr desde ESA carpeta (Node busca
-`@prisma/client` en el `node_modules` de donde vive el archivo que lo ejecuta, no en el
-de `migration/`).
+Nota técnica: `exportFromSqlite.js` necesita el cliente de Prisma ya generado en
+`backend/node_modules/` (porque ahí es donde vive la app real), pero el archivo en sí
+resuelve esa ruta solo, sin importar desde qué carpeta lo ejecutes — no hace falta hacer
+`cd backend` primero (una versión anterior de esta guía lo pedía; ya no es necesario).
 
 ## Cómo verificar esto antes de confiar en él
 
