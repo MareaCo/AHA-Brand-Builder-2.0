@@ -27,6 +27,30 @@ Esto reutiliza el mismo criterio que ya usa hoy el PDF de cierre existente
 es extender el que ya está probado en producción a las 8 etapas completas en vez de solo
 al resumen ejecutivo corto que arma ese endpoint hoy.
 
+### Aclaración explícita (pedida por Catalina tras revisar los mockups): el texto va COMPLETO, nunca resumido
+
+El valor de cada campo (`stageData/{N}.fields.{key}.value`) se usa **tal cual está
+guardado en la barra lateral derecha — íntegro, sin acortar, sin resumir, sin reescribir**.
+Esto es distinto de "elegir qué campos entran" (sección 1, ya resuelto): una vez un campo
+SÍ entra, su contenido no se toca.
+
+- **Nunca** generar una versión corta o "resumen ejecutivo" del valor de un campo al
+  momento de exportar — ni con una llamada a Gemini, ni recortando el string, ni con
+  `…` al final. Si el valor validado es largo, el campo ocupa el espacio que necesite.
+- **Nunca** leer `messages` (la sección central del chat) para completar, parafrasear o
+  "mejorar" lo que ya hay en `fields.{key}.value` — ese valor, tal como quedó
+  `validado_por_usuario` o `editado_por_usuario`, es la única fuente de verdad.
+- El DISEÑO (no el contenido) es lo que debe adaptarse al texto, nunca al revés: una
+  tarjeta crece de alto si el texto es largo, una página de PDF agrega una página
+  adicional si no cabe, una slide del PPT no comprime la letra por debajo de lo legible
+  — el texto validado nunca se trunca para que quepa en un layout fijo.
+- Los mockups de diseño en `https://claude.ai/artifact/1v7vvnJ4swkRDRZwxSqFDY` (HTML),
+  `https://claude.ai/artifact/K3oH5LKm87gzgeC3KLnC6A` (PPT) y
+  `https://claude.ai/artifact/U4cQeiso99nxArjoApfB5C` (PDF) usan texto de EJEMPLO corto a
+  propósito, solo para definir el estilo — no asumir que el contenido real siempre será
+  así de breve; `buildConsolidatedContent()` nunca decide cuánto texto cabe, solo cuáles
+  campos entran.
+
 ## 1. Qué contenido entra, etapa por etapa (y qué NO entra)
 
 | Etapa | Entra al entregable | De dónde sale |
