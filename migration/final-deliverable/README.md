@@ -107,6 +107,40 @@ Dónde se configura: un panel sencillo en la pantalla de la marca (nombre + indu
 existen ahí) con 2 selectores de color y un cargador de imagen para el logo — sube el
 archivo a Cloud Storage for Firebase y guarda la URL resultante en `brands/{brandId}`.
 
+### 3.1. Extracción automática desde la página web (añadido tras construir lo anterior)
+
+Pedido de Catalina al ver el panel ya construido: que la página web de la marca sea el
+**primer insumo** de la Etapa 0, y que de ahí se extraigan automáticamente tanto el logo
+como los colores — en vez de depender solo de subirlos a mano.
+
+Regla que se mantiene igual que en el resto de la metodología, y que es la razón de ser
+de este sub-apartado: **nunca se guarda nada en `brands/{brandId}` sin que la persona lo
+valide**. El análisis de la página web PROPONE un logo y 2 colores candidatos — mismo
+patrón `propuesto_por_ia` → `validado_por_usuario`/`editado_por_usuario` que ya usa el
+resto de la app — la persona los ve, los acepta tal cual o los ajusta, y solo ENTONCES se
+guardan. Un logo mal detectado o un color de baja confianza en un documento para un CEO es
+justamente el tipo de error que este patrón ya existe para evitar en toda la app.
+
+Cómo se extrae (orden de preferencia, nunca inventar si no hay confianza razonable):
+
+- **Logo**: (a) `<meta property="og:image">`, (b) el favicon/`apple-touch-icon` de mayor
+  resolución, (c) la primera imagen dentro del `<header>` de la página cuyo nombre/clase/
+  `alt` contenga "logo". Si ninguna se encuentra con confianza, el campo queda vacío para
+  completarlo a mano — nunca se fuerza una imagen que no sea claramente el logo.
+- **Colores**: el color de fondo dominante del encabezado o de los botones principales del
+  sitio (leyendo las reglas CSS más repetidas, o promediando los píxeles del logo/header).
+  Igual que con el logo: sin confianza razonable, el campo queda vacío, nunca se inventa
+  un color genérico.
+
+Dónde vive esto en la UI ya construida: el botón "Analizar Presencia Web" (Etapa 0,
+bloque "3. Página web", hoy deshabilitado/placeholder) — al activarse, los resultados
+(logo + colores candidatos) aparecen como propuesta editable directamente en los bloques
+"1. Logo de marca" y "Paleta de marca" que ya existen, nunca como un campo ni un paso
+aparte. Una vez la persona los confirma o ajusta, se guardan en `brands/{brandId}` con el
+mismo esquema de siempre (`logoUrl`/`primaryColor`/`secondaryColor`) — el entregable final
+(sección 4) no cambia en nada, sigue leyendo esos mismos 3 campos sin saber si llegaron ahí
+a mano o por análisis automático de la web.
+
 ## 4. Los 3 formatos de salida
 
 El usuario elige con checkboxes cuáles formatos quiere (puede marcar varios a la vez) y
