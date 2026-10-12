@@ -294,10 +294,15 @@ no hay razón para migrarlo solo por tener una sola librería.
 node migration/final-deliverable/__tests__/consolidatedContent.test.mjs   # 10/10 deben pasar
 ```
 
-## Cómo aplicarlo dentro de Google AI Studio
+## Cómo aplicarlo dentro de Google AI Studio (histórico — ver sección 6 para el prompt vigente)
 
-Pégale esto al asistente de Build, adjuntando `consolidatedContent.js` de esta carpeta
-como referencia:
+Esta fue la primera versión del prompt de este sprint, ya superada por los ajustes de las
+secciones 1 a 4 (texto completo nunca resumido, tipografía única Public Sans, HTML
+convertido en experiencia navegable, PDF/PPT con las 9 páginas/slides completas). Se deja
+aquí solo como registro de cómo empezó — **no la vuelvas a pegar**, usa la sección 6.
+
+<details>
+<summary>Prompt original (histórico)</summary>
 
 ```
 Ahora necesito el entregable final consolidado: una vez las 8 etapas de una sesión están
@@ -305,57 +310,98 @@ completas (o incluso antes, con lo que ya esté validado), quiero poder generarl
 descargarlo en 3 formatos — PDF, PPT, HTML — eligiendo cuáles quiero con checkboxes (puedo
 marcar varios a la vez).
 
-Regla más importante de todo este sprint, no negociable: el contenido de los 3 formatos
-debe ser EXCLUSIVAMENTE lo que ya está validado o editado por el usuario en cada etapa —
-nunca partes del chat, nunca una síntesis o interpretación nueva generada al momento de
-exportar. Para garantizar esto estructuralmente, los 3 formatos deben consumir la MISMA
-función de selección de contenido, nunca leer stageData/messages cada uno por su cuenta.
+[...texto original con el HTML autocontenido simple de secciones, PDF con #282072/#b3de4a
+fijos como ejemplo, y PPT con bullets genéricos — reemplazado por la sección 6.]
+```
 
-Te adjunto consolidatedContent.js ya escrito y probado (10/10 tests) con esa función:
-buildConsolidatedContent() recibe los documentos ya leídos de Firestore (client, brand,
-session, un mapa stageDataByNumber con las etapas 1 a 7, la imagen de la pirámide en
-base64, y el manifiesto con la variante de tono ya elegida) y devuelve una sola
-estructura plana ya filtrada — con los campos de cada etapa, en orden, solo los que
-tienen status "validado_por_usuario" o "editado_por_usuario" (para el campo "pilares",
-que es una lista, solo entran los elementos individuales que ya están cerrados, aunque el
-status agregado del campo completo todavía no lo esté — esto es intencional, está
-probado, no lo cambies). Pórtala tal cual a una Cloud Function o a donde viva la lógica
-de tu backend — es lógica pura, sin dependencias de Firestore directamente.
+</details>
 
-Con esa misma estructura, construye los 3 generadores:
+## 6. Prompt final de ajuste — el que se pega hoy en AI Studio
 
-1. HTML: un único archivo autocontenido (estilos embebidos, sin dependencias externas),
-   una sección por etapa validada, la imagen de la pirámide, y el manifiesto al final.
+AI Studio ya tiene una primera versión construida (checkboxes de formato, los 3
+generadores, el panel de marca, y la extracción automática de logo/colores desde la
+página web). Esto NO es un build desde cero — es la ronda de ajuste que deja todo
+alineado con lo que se definió y se probó en los mockups de diseño de esta conversación:
 
-2. PDF: reutiliza exactamente el patrón de backend/src/routes/export.js (te lo adjunto
-   también) — misma librería (pdf-lib), misma captura de la pirámide con html2canvas ya
-   renderizada en el navegador, portada con los colores de marca (azul marino #282072 y
-   verde lima #b3de4a como respaldo si la marca no tiene colores propios configurados),
-   resumen por etapa con texto envuelto por ancho de página. La diferencia: en vez de
-   iterar todas las etapas con un resumen corto, itera las etapas ya filtradas que te
-   entrega buildConsolidatedContent() (el contenido completo de las 7 etapas con algo
-   validado), y usa el logo/colores de la marca cuando existan.
+- `https://claude.ai/artifact/1v7vvnJ4swkRDRZwxSqFDY` — Landing HTML (experiencia
+  navegable de 9 pantallas, con los 2 momentos "wow" — pirámide y pilares — armándose al
+  clic)
+- `https://claude.ai/artifact/K3oH5LKm87gzgeC3KLnC6A` — PPT (9 slides)
+- `https://claude.ai/artifact/U4cQeiso99nxArjoApfB5C` — PDF (9 páginas)
 
-3. PPT: nuevo, con la librería pptxgenjs — portada (logo/nombre de marca), una slide por
-   etapa validada con el título y los campos como bullets cortos y claros (nunca un
-   párrafo largo pegado en una sola caja de texto), slide de la Pirámide a página
-   completa, slide de la Propuesta de Valor, y slide final del Manifiesto. Aplica los
-   mismos colores de marca (o el respaldo de AHA) al tema de la presentación.
+**Antes de pegar el prompt**: toma una captura de cada uno de los 3 mockups (ábrelos,
+recorre las pantallas/slides/páginas) y adjúntaselas a AI Studio junto con el texto — así
+ve exactamente el diseño que hay que igualar, no solo lo que se describe en palabras.
 
-Además, necesito 3 campos nuevos en el documento brands/{brandId} de Firestore: logoUrl
-(string, URL del logo subido a Firebase Storage), primaryColor y secondaryColor (strings
-hex). Agrega un panel sencillo en la pantalla de edición de la marca para configurarlos —
-un selector de color para cada uno y un cargador de imagen para el logo. Cuando una marca
-no tiene estos campos configurados (o son null), los 3 formatos deben usar
-automáticamente el respaldo de AHA (#282072 / #b3de4a, sin logo en portada) — nunca deben
-fallar ni dejar espacios vacíos por la falta de esta configuración.
+```
+Esta es una ronda de AJUSTE sobre lo que ya construiste para el entregable final (PDF,
+PPT, HTML) — no empieces desde cero. Te adjunto capturas de los 3 mockups de diseño ya
+aprobados (Landing HTML, PPT, PDF) — iguala ese diseño exactamente. 4 ajustes puntuales:
 
-La audiencia de este documento son Presidentes, CEOs y Gerentes de Área — el diseño debe
-sentirse profesional y potente: una idea por página/slide, máximo 3 tamaños de tipografía,
-máximo 2 colores de acento por página, la Pirámide y la Propuesta de Valor como páginas
-protagonistas sin texto compitiendo al lado, y el Manifiesto como cierre emocional al
-final del documento.
+1. REGLA NO NEGOCIABLE, otra vez, porque es la más importante de todo el sprint: el texto
+   de cada campo va COMPLETO — exactamente como quedó guardado en fields.{key}.value tras
+   ser validado o editado en la columna derecha — nunca una versión resumida, acortada o
+   reescrita, y nunca generada a partir del chat (sección central). Si el texto es largo,
+   el DISEÑO se adapta (una tarjeta crece, el PDF agrega una página, una pantalla del HTML
+   se divide en "4a"/"4b") — nunca se trunca el contenido validado para que quepa.
 
-Constrúyelo y muéstrame los 3 formatos generados para una sesión real (Autollantas
-Nutibara o Kansha), incluyendo los 3 archivos descargados.
+2. TIPOGRAFÍA: una sola familia en los 3 formatos — Public Sans (pesos 400/500/600/700/800
+   según jerarquía) — elimina cualquier tipografía serif que hayas usado para títulos,
+   como se ve en los mockups adjuntos.
+
+3. PDF y PPT deben tener el mismo contenido COMPLETO que el HTML — portada + Etapa 1
+   (Territorio) + Etapa 2 (Insight) + Etapa 3 (Concepto) + Etapa 4 (Propósito y Definición
+   del Negocio) + Etapa 5 (Target) + Etapa 6 (Pilares) + Etapa 7 (Pirámide) + Manifiesto —
+   las 9 páginas/slides completas, no un resumen ejecutivo corto. Los 3 formatos deben
+   mostrar exactamente las mismas etapas con el mismo contenido, solo cambia el formato de
+   presentación — si una etapa no tiene nada validado todavía, esa página/slide se omite
+   en los 3 formatos por igual (nunca aparece en uno y en otro no).
+
+4. El HTML deja de ser una página de scroll — se convierte en una EXPERIENCIA NAVEGABLE,
+   una pantalla a la vez (ve el mockup adjunto). Reconstrúyelo así:
+
+   Convierte el entregable en una experiencia en vivo en el navegador, un solo archivo
+   HTML autocontenido (sin dependencias externas), a partir de buildConsolidatedContent()
+   de la sesión: portada, las etapas 1 a 7 ya validadas, y la variante de manifiesto
+   elegida.
+
+   Contexto: se presenta en vivo ante Presidentes, CEOs y Gerentes de Área, o se deja para
+   que la persona la recorra sola. IMPORTANTE — a diferencia de un pitch deck normal, NO
+   hay límite de palabras por pantalla: cada pantalla muestra el texto COMPLETO y ya
+   validado de ese campo (regla 1 de arriba) — nunca una versión resumida. Una pantalla,
+   un campo (o un grupo pequeño de campos de la misma etapa).
+
+   Identidad visual: logoUrl/primaryColor/secondaryColor de brands/{brandId} (respaldo de
+   AHA #282072/#b3de4a cuando no existen), tipografía Public Sans en todo el documento.
+
+   Efectos de vida ("wow"):
+   - Quiero profundidad y movimiento tipo Three.js, PERO elige tú la técnica más liviana
+     que logre el efecto (CSS, SVG animado, canvas 2D, WebGL solo si es imprescindible).
+     Prioriza que el archivo pese poco y cargue instantáneo.
+   - Regla de oro: cada animación debe SIGNIFICAR algo del argumento — la Pirámide se
+     arma nivel por nivel de abajo hacia arriba (como ya se ve en el mockup adjunto), los
+     Pilares se revelan uno a uno — nada de partículas decorativas porque sí.
+   - Los momentos importantes los dispara la persona con un clic o una tecla, nunca se
+     reproducen solos al entrar a la pantalla.
+
+   Navegación: flecha derecha/clic/tap avanza, izquierda/swipe retrocede, F pantalla
+   completa, B pantalla en negro. Indicador discreto de en qué etapa va (ej. "4 / 9"). En
+   celular vertical, pide girar el dispositivo.
+
+   Calidad: texto legible a 4 metros en un proyector con luz (contraste de al menos 50%
+   sobre el fondo en todo texto con significado). Verifica renderizando capturas de cada
+   pantalla y corrigiendo lo que se desborde o choque.
+
+   Entrega: el archivo HTML + una versión PDF estática como documento para dejar (el
+   mismo PDF del punto 3, no uno nuevo).
+
+Construye esto por rondas — primero confirma que el contenido y el texto completo están
+bien, después ajusta el sistema visual (Public Sans, colores de marca), y al final los
+efectos de la experiencia HTML. Antes de darlo por terminado, actúa como mi audiencia más
+escéptica y dime qué preguntas incómodas le haría este documento a un CEO — corrige lo que
+encuentres.
+
+Muéstrame los 3 formatos regenerados para una sesión real (Autollantas Nutibara), con las
+9 etapas completas en los 3, y confírmame explícitamente que el texto de cada campo es el
+valor completo sin resumir.
 ```
