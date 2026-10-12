@@ -172,13 +172,79 @@ un solo botón "Generar entregable" dispara la generación de todos los marcados
 formatos consumen exactamente la misma estructura que devuelve `buildConsolidatedContent()`
 — nunca leen la base de datos cada uno por su cuenta.
 
-### HTML — la base autocontenida
+### HTML — experiencia navegable en el navegador (no un scroll plano)
 
-Un único archivo `.html` con los estilos embebidos (sin dependencias externas) — es el
-formato más simple y sirve además como base visual de referencia para los otros dos. Se
-genera recorriendo `content.stages` y pintando una sección por etapa, la imagen de la
-pirámide, y el manifiesto al final. Útil para compartir por link o verlo directo en el
-navegador sin descargar nada.
+Un único archivo `.html` autocontenido (sin dependencias externas) — pero no es una página
+que se desplaza de arriba a abajo: es una **experiencia por pantallas**, una etapa a la
+vez, pensada para presentarse en vivo o recorrerse sola. Catalina pidió construir esto
+siempre a partir de la siguiente plantilla de prompt (uso ya probado por ella para decks en
+vivo), **con un solo ajuste no negociable**: el límite de "~45 palabras por slide" de la
+plantilla original NO aplica aquí — cada pantalla lleva el texto COMPLETO y validado de su
+campo (ver la aclaración de la sección anterior), nunca acortado. Todo lo demás de la
+plantilla sí aplica tal cual:
+
+```
+Convierte mi presentación en una experiencia en vivo en el navegador, un solo
+archivo HTML autocontenido (sin dependencias externas), a partir de este
+contenido: [el resultado de buildConsolidatedContent() para esta sesión — portada,
+las etapas 1 a 7 ya validadas, y la variante de manifiesto elegida].
+
+Contexto: la presento en vivo ante Presidentes, CEOs y Gerentes de Área, o se la
+dejo para que la recorran solos. IMPORTANTE — a diferencia de un pitch deck normal,
+NO hay límite de palabras por pantalla: cada pantalla debe mostrar el texto COMPLETO
+y ya validado de ese campo, tal como quedó en la columna derecha de la app — nunca
+una versión resumida a ~45 palabras. Una pantalla, un campo (o un grupo pequeño de
+campos de la misma etapa) — eso sí se mantiene.
+
+Identidad visual: los colores de marca ya resueltos (logoUrl, primaryColor,
+secondaryColor de brands/{brandId}, con el respaldo de AHA #282072/#b3de4a cuando
+no existen) y la tipografía Public Sans en todo el documento — ver sección 2
+(sistema de diseño) de este mismo documento.
+
+Efectos de vida ("wow"):
+* Quiero profundidad y movimiento tipo Three.js, PERO elige tú la técnica más
+  liviana que logre el efecto (CSS, SVG animado, canvas 2D, WebGL solo si es
+  imprescindible). Prioriza que el archivo pese poco y cargue instantáneo.
+* Regla de oro: cada animación debe SIGNIFICAR algo del argumento (la pirámide se
+  arma nivel por nivel de abajo hacia arriba, un pilar aparece al validarse, el
+  manifiesto se revela como cierre) — nada de partículas decorativas porque sí.
+* Los momentos importantes los dispara la persona con un clic/tecla, nunca se
+  reproducen solos al entrar a la pantalla.
+
+Navegación: flecha derecha/clic/tap avanza, izquierda/swipe retrocede, F pantalla
+completa, B pantalla en negro. Indicador discreto de en qué etapa va (ej. "4 / 9").
+En celular vertical, pedir girar el dispositivo.
+
+Calidad: texto legible a 4 metros en un proyector con luz (contraste de al menos
+50% sobre el fondo en todo texto con significado). Verifica el resultado
+renderizando capturas de cada pantalla y corrigiendo lo que se desborde o choque
+— con texto completo y no acortado, una etapa larga puede necesitar más de una
+pantalla; que el diseño lo resuelva (una segunda pantalla "4b"), nunca que el
+texto se trunque.
+
+Entrega: el archivo HTML + una versión PDF estática como documento para dejar
+(este PDF estático es el mismo formato PDF descrito más abajo, no uno nuevo).
+```
+
+Tres reglas de proceso que van siempre con este prompt (pedidas por Catalina, ya
+probadas por ella en otros decks):
+
+1. **Construir por rondas**: primero estructura y contenido (qué entra en cada pantalla,
+   en qué orden), después el sistema visual (colores, tipografía, layout), y solo al
+   final los efectos. Un efecto encima de una pantalla mal resuelta es maquillaje sobre
+   un problema.
+2. **Pedir crítica antes de entregar**: que AI Studio actúe como "la audiencia más
+   escéptica" y diga qué preguntas incómodas le haría este documento a un CEO — esa
+   ronda vale más que cualquier animación.
+3. **El wow es un momento, no una decoración**: si un efecto no se puede explicar en una
+   frase de qué significa para la estrategia de esta marca, se corta.
+
+Mecánicas de navegación que quedan FUERA de lo que este mismo prompt puede demostrar
+dentro de una herramienta de mockup/diseño (teclas globales, pantalla completa real,
+swipe táctil) — son estándar en un sitio web normal sin sandbox, así que AI Studio debe
+implementarlas tal cual al construir la app real, aunque el mockup de referencia
+(`https://claude.ai/artifact/1v7vvnJ4swkRDRZwxSqFDY`) solo pueda demostrar la navegación
+por clic/botón y el indicador de pantalla, por la misma limitación de sandbox.
 
 ### PDF — reutiliza el patrón ya probado en producción
 
